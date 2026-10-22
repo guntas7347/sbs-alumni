@@ -26,7 +26,15 @@ export interface AlumniRegistration {
   branch: string;
   rollNumber?: string;
   attendanceType: "in-person" | "virtual" | "supporting";
-  culturalInterest: "none" | "dance" | "music" | "drama" | "anchoring" | "fine-arts" | "poetry" | "other";
+  culturalInterest:
+    | "none"
+    | "dance"
+    | "music"
+    | "drama"
+    | "anchoring"
+    | "fine-arts"
+    | "poetry"
+    | "other";
   culturalDetails?: string;
   guestCount: number;
   dietaryPreference?: "veg" | "non-veg";
@@ -39,7 +47,7 @@ export interface AlumniRegistration {
     paymentMethod: string;
     paidAt: string;
     referenceNumber?: string;
-  };
+  } | null;
   checkedIn: boolean;
   checkedInAt?: string;
   verifiedBy?: string;
@@ -51,7 +59,14 @@ export interface AlumniRegistration {
 
 export type AlumniRegistrationInput = Omit<
   AlumniRegistration,
-  "id" | "regNumber" | "paymentStatus" | "checkedIn" | "createdAt" | "updatedAt" | "verifiedBy" | "verifiedAt"
+  | "id"
+  | "regNumber"
+  | "paymentStatus"
+  | "checkedIn"
+  | "createdAt"
+  | "updatedAt"
+  | "verifiedBy"
+  | "verifiedAt"
 >;
 
 export interface AuthorizedAdmin {

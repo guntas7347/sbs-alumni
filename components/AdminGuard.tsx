@@ -220,6 +220,13 @@ export default function AdminGuard({
               >
                 Manage Admins & Faculty
               </Link>
+              <Link
+                href="/admin/razorpay"
+                className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors flex items-center gap-1.5"
+              >
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>Razorpay</span>
+              </Link>
             </nav>
 
             {/* User Profile & Actions */}
@@ -271,6 +278,13 @@ export default function AdminGuard({
               className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0"
             >
               Admins / Faculty
+            </Link>
+            <Link
+              href="/admin/razorpay"
+              className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0 flex items-center gap-1"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              Razorpay
             </Link>
           </div>
         </div>

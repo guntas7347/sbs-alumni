@@ -4,8 +4,14 @@ import { db } from "@/lib/firebase/firebase";
 import type { AlumniRegistration, AlumniRegistrationInput } from "@/lib/types";
 
 export async function createAlumniRegistration(
-  input: AlumniRegistrationInput
-): Promise<{ success: boolean; id?: string; regNumber?: string; isFree?: boolean; error?: string }> {
+  input: AlumniRegistrationInput,
+): Promise<{
+  success: boolean;
+  id?: string;
+  regNumber?: string;
+  isFree?: boolean;
+  error?: string;
+}> {
   try {
     if (!input.email || !input.fullName) {
       return { success: false, error: "Name and email are required" };
@@ -13,7 +19,8 @@ export async function createAlumniRegistration(
 
     const currentYear = new Date().getFullYear();
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const prefix = input.registrantType === "student" ? "SBSSU-STU" : "SBSSU-ALM";
+    const prefix =
+      input.registrantType === "student" ? "SBSSU-STU" : "SBSSU-ALM";
     const regNumber = `${prefix}-${currentYear}-${randomSuffix}`;
 
     const now = new Date().toISOString();
@@ -33,13 +40,17 @@ export async function createAlumniRegistration(
             paymentMethod: "Student Complimentary Pass (₹0)",
             paidAt: now,
           }
-        : undefined,
+        : null,
       checkedIn: false,
       createdAt: now,
       updatedAt: now,
     };
 
-    const docRef = await db.collection("alumni_registrations").add(registrationData);
+    console.log(registrationData);
+
+    const docRef = await db
+      .collection("alumni_registrations")
+      .add(registrationData);
 
     return {
       success: true,
@@ -49,12 +60,15 @@ export async function createAlumniRegistration(
     };
   } catch (error: any) {
     console.error("Error creating registration:", error);
-    return { success: false, error: error?.message || "Failed to create registration" };
+    return {
+      success: false,
+      error: error?.message || "Failed to create registration",
+    };
   }
 }
 
 export async function getAlumniRegistrationById(
-  id: string
+  id: string,
 ): Promise<{ success: boolean; data?: AlumniRegistration; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -70,22 +84,29 @@ export async function getAlumniRegistrationById(
       success: true,
       data: {
         id: docSnap.id,
-        registrantType: data?.registrantType || (data?.era ? "alumni" : "student"),
+        registrantType:
+          data?.registrantType || (data?.era ? "alumni" : "student"),
         ...data,
       } as AlumniRegistration,
     };
   } catch (error: any) {
     console.error("Error fetching registration by ID:", error);
-    return { success: false, error: error?.message || "Failed to fetch registration" };
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch registration",
+    };
   }
 }
 
 export async function verifyRegistrationCode(
-  rawInput: string
+  rawInput: string,
 ): Promise<{ success: boolean; data?: AlumniRegistration; error?: string }> {
   try {
     if (!rawInput || !rawInput.trim()) {
-      return { success: false, error: "Please enter or scan a barcode/registration code." };
+      return {
+        success: false,
+        error: "Please enter or scan a barcode/registration code.",
+      };
     }
 
     let code = rawInput.trim();
@@ -104,14 +125,18 @@ export async function verifyRegistrationCode(
 
     // 1. Try direct Firestore document ID lookup
     try {
-      const docSnap = await db.collection("alumni_registrations").doc(code).get();
+      const docSnap = await db
+        .collection("alumni_registrations")
+        .doc(code)
+        .get();
       if (docSnap.exists) {
         const data = docSnap.data();
         return {
           success: true,
           data: {
             id: docSnap.id,
-            registrantType: data?.registrantType || (data?.era ? "alumni" : "student"),
+            registrantType:
+              data?.registrantType || (data?.era ? "alumni" : "student"),
             ...data,
           } as AlumniRegistration,
         };
@@ -135,7 +160,8 @@ export async function verifyRegistrationCode(
         success: true,
         data: {
           id: docSnap.id,
-          registrantType: data?.registrantType || (data?.era ? "alumni" : "student"),
+          registrantType:
+            data?.registrantType || (data?.era ? "alumni" : "student"),
           ...data,
         } as AlumniRegistration,
       };
@@ -155,7 +181,8 @@ export async function verifyRegistrationCode(
         success: true,
         data: {
           id: docSnap.id,
-          registrantType: data?.registrantType || (data?.era ? "alumni" : "student"),
+          registrantType:
+            data?.registrantType || (data?.era ? "alumni" : "student"),
           ...data,
         } as AlumniRegistration,
       };
@@ -173,28 +200,36 @@ export async function verifyRegistrationCode(
 
 export async function markCheckInAtGate(
   id: string,
-  verifiedByEmail?: string
+  verifiedByEmail?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
     const now = new Date().toISOString();
-    await db.collection("alumni_registrations").doc(id).update({
-      checkedIn: true,
-      checkedInAt: now,
-      verifiedBy: verifiedByEmail?.trim().toLowerCase() || "faculty",
-      verifiedAt: now,
-      updatedAt: now,
-    });
+    await db
+      .collection("alumni_registrations")
+      .doc(id)
+      .update({
+        checkedIn: true,
+        checkedInAt: now,
+        verifiedBy: verifiedByEmail?.trim().toLowerCase() || "faculty",
+        verifiedAt: now,
+        updatedAt: now,
+      });
     return { success: true };
   } catch (error: any) {
     console.error("Error checking in attendee at gate:", error);
-    return { success: false, error: error?.message || "Failed to check in attendee" };
+    return {
+      success: false,
+      error: error?.message || "Failed to check in attendee",
+    };
   }
 }
 
-export async function getAlumniRegistrationByEmail(
-  email: string
-): Promise<{ success: boolean; data?: AlumniRegistration | null; error?: string }> {
+export async function getAlumniRegistrationByEmail(email: string): Promise<{
+  success: boolean;
+  data?: AlumniRegistration | null;
+  error?: string;
+}> {
   try {
     if (!email) return { success: false, error: "Email is required" };
 
@@ -215,13 +250,17 @@ export async function getAlumniRegistrationByEmail(
       success: true,
       data: {
         id: docSnap.id,
-        registrantType: data?.registrantType || (data?.era ? "alumni" : "student"),
+        registrantType:
+          data?.registrantType || (data?.era ? "alumni" : "student"),
         ...data,
       } as AlumniRegistration,
     };
   } catch (error: any) {
     console.error("Error fetching registration by email:", error);
-    return { success: false, error: error?.message || "Failed to fetch registration" };
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch registration",
+    };
   }
 }
 
@@ -231,25 +270,31 @@ export async function updateAlumniPayment(
     transactionId: string;
     paymentMethod: string;
     referenceNumber?: string;
-  }
+  },
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
 
     const now = new Date().toISOString();
-    await db.collection("alumni_registrations").doc(id).update({
-      paymentStatus: "completed",
-      paymentDetails: {
-        ...paymentDetails,
-        paidAt: now,
-      },
-      updatedAt: now,
-    });
+    await db
+      .collection("alumni_registrations")
+      .doc(id)
+      .update({
+        paymentStatus: "completed",
+        paymentDetails: {
+          ...paymentDetails,
+          paidAt: now,
+        },
+        updatedAt: now,
+      });
 
     return { success: true };
   } catch (error: any) {
     console.error("Error updating payment:", error);
-    return { success: false, error: error?.message || "Failed to update payment" };
+    return {
+      success: false,
+      error: error?.message || "Failed to update payment",
+    };
   }
 }
 
@@ -269,7 +314,8 @@ export async function getAllRegistrations(): Promise<{
       const data = doc.data();
       registrations.push({
         id: doc.id,
-        registrantType: data?.registrantType || (data?.era ? "alumni" : "student"),
+        registrantType:
+          data?.registrantType || (data?.era ? "alumni" : "student"),
         ...data,
       } as AlumniRegistration);
     });
@@ -277,7 +323,10 @@ export async function getAllRegistrations(): Promise<{
     return { success: true, data: registrations };
   } catch (error: any) {
     console.error("Error fetching all registrations:", error);
-    return { success: false, error: error?.message || "Failed to fetch registrations" };
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch registrations",
+    };
   }
 }
 

@@ -42,3 +42,16 @@ export async function logoutUser() {
 export function subscribeToAuth(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
 }
+
+export const getCurrentUser = async () => {
+  if (!auth.currentUser) {
+    return null;
+  }
+
+  const idToken = await auth.currentUser.getIdToken();
+
+  return {
+    user: auth.currentUser,
+    idToken,
+  };
+};
