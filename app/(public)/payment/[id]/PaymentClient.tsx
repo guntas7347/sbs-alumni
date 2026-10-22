@@ -26,6 +26,7 @@ import {
   Check,
   RefreshCw,
 } from "lucide-react";
+import TestCardModal from "@/components/TestCardModal";
 
 declare global {
   interface Window {
@@ -41,7 +42,9 @@ export default function PaymentClient({
   const { id } = use(params);
   const router = useRouter();
 
-  const [registration, setRegistration] = useState<AlumniRegistration | null>(null);
+  const [registration, setRegistration] = useState<AlumniRegistration | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -95,7 +98,10 @@ export default function PaymentClient({
       const orderRes = await createRazorpayOrderAction(registration.id);
 
       if (!orderRes.success || !orderRes.order) {
-        setError(orderRes.error || "Failed to initialize Razorpay order. Please try again.");
+        setError(
+          orderRes.error ||
+            "Failed to initialize Razorpay order. Please try again.",
+        );
         setProcessing(false);
         return;
       }
@@ -115,7 +121,9 @@ export default function PaymentClient({
       }
 
       if (!window.Razorpay) {
-        setError("Razorpay SDK could not be loaded. Please check your internet connection.");
+        setError(
+          "Razorpay SDK could not be loaded. Please check your internet connection.",
+        );
         setProcessing(false);
         return;
       }
@@ -169,7 +177,10 @@ export default function PaymentClient({
                 router.push(`/ticket/${registration.id}`);
               }, 1500);
             } else {
-              setError(verifyRes.error || "Payment verification failed. Please contact admin.");
+              setError(
+                verifyRes.error ||
+                  "Payment verification failed. Please contact admin.",
+              );
               setProcessing(false);
             }
           } catch (err: any) {
@@ -183,14 +194,19 @@ export default function PaymentClient({
 
       rzpInstance.on("payment.failed", function (response: any) {
         console.error("Razorpay payment failed:", response.error);
-        setError(response.error?.description || "Payment failed or was declined.");
+        setError(
+          response.error?.description || "Payment failed or was declined.",
+        );
         setProcessing(false);
       });
 
       rzpInstance.open();
     } catch (err: any) {
       console.error("Checkout launch error:", err);
-      setError(err?.message || "An unexpected error occurred while launching Razorpay.");
+      setError(
+        err?.message ||
+          "An unexpected error occurred while launching Razorpay.",
+      );
       setProcessing(false);
     }
   };
@@ -199,7 +215,9 @@ export default function PaymentClient({
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
-        <p className="text-sm text-zinc-500 font-medium">Loading checkout details...</p>
+        <p className="text-sm text-zinc-500 font-medium">
+          Loading checkout details...
+        </p>
       </div>
     );
   }
@@ -249,16 +267,22 @@ export default function PaymentClient({
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Pass Number:</span>
-              <strong className="font-mono text-zinc-900">{registration.regNumber}</strong>
+              <strong className="font-mono text-zinc-900">
+                {registration.regNumber}
+              </strong>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Amount Paid:</span>
-              <strong className="text-emerald-700 font-bold">₹{registration.amount || 1000} (INR)</strong>
+              <strong className="text-emerald-700 font-bold">
+                ₹{registration.amount || 1000} (INR)
+              </strong>
             </div>
             {paymentTxnId && (
               <div className="flex justify-between pt-1 border-t border-zinc-200">
                 <span className="text-zinc-500">Razorpay ID:</span>
-                <span className="font-mono text-zinc-600 text-[11px]">{paymentTxnId}</span>
+                <span className="font-mono text-zinc-600 text-[11px]">
+                  {paymentTxnId}
+                </span>
               </div>
             )}
           </div>
@@ -368,7 +392,9 @@ export default function PaymentClient({
 
             <div className="pt-4 border-t border-zinc-100 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-zinc-500 block">Total Payable:</span>
+                <span className="text-xs font-semibold text-zinc-500 block">
+                  Total Payable:
+                </span>
                 <span className="text-2xl font-black text-orange-600">
                   ₹{registration.amount || 1000}
                 </span>
@@ -403,7 +429,8 @@ export default function PaymentClient({
                   </span>
                 </h2>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  Fast, secure checkout supporting all major Indian payment methods.
+                  Fast, secure checkout supporting all major Indian payment
+                  methods.
                 </p>
               </div>
 
@@ -422,20 +449,30 @@ export default function PaymentClient({
             <div className="grid grid-cols-3 gap-3">
               <div className="p-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 flex flex-col items-center text-center gap-1.5">
                 <QrCode className="w-6 h-6 text-orange-600" />
-                <span className="text-xs font-bold text-zinc-800">UPI / QR</span>
-                <span className="text-[10px] text-zinc-400">GPay, PhonePe, Paytm</span>
+                <span className="text-xs font-bold text-zinc-800">
+                  UPI / QR
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  GPay, PhonePe, Paytm
+                </span>
               </div>
 
               <div className="p-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 flex flex-col items-center text-center gap-1.5">
                 <CreditCard className="w-6 h-6 text-orange-600" />
                 <span className="text-xs font-bold text-zinc-800">Cards</span>
-                <span className="text-[10px] text-zinc-400">Visa, Mastercard, RuPay</span>
+                <span className="text-[10px] text-zinc-400">
+                  Visa, Mastercard, RuPay
+                </span>
               </div>
 
               <div className="p-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 flex flex-col items-center text-center gap-1.5">
                 <Building className="w-6 h-6 text-orange-600" />
-                <span className="text-xs font-bold text-zinc-800">Net Banking</span>
-                <span className="text-[10px] text-zinc-400">All Major Banks</span>
+                <span className="text-xs font-bold text-zinc-800">
+                  Net Banking
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  All Major Banks
+                </span>
               </div>
             </div>
 
@@ -445,7 +482,10 @@ export default function PaymentClient({
                 <span>Bank-Grade 256-bit SSL Encryption</span>
               </div>
               <p className="text-zinc-600 leading-relaxed text-[11px]">
-                Payments are processed directly by Razorpay Payment Gateway. Your banking and card credentials are never stored on our servers. Once payment succeeds, your pass barcode and ticket number will be instantly unlocked.
+                Payments are processed directly by Razorpay Payment Gateway.
+                Your banking and card credentials are never stored on our
+                servers. Once payment succeeds, your pass barcode and ticket
+                number will be instantly unlocked.
               </p>
             </div>
 
@@ -488,6 +528,7 @@ export default function PaymentClient({
           </div>
         </div>
       </div>
+      <TestCardModal />
     </div>
   );
 }
