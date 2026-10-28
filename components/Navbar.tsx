@@ -24,6 +24,7 @@ export default function Navbar() {
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Sanjh 2026", href: "/sanjh-2026", badge: "Nov 14" },
+    { name: "Schedule", href: "/schedule" },
     { name: "Legacy & About", href: "/about" },
     { name: "Register", href: "/sanjh-2026/register", highlight: true },
   ];
@@ -43,10 +44,13 @@ export default function Navbar() {
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-3 shrink-0 text-emerald-800">
-            <span className="inline-flex items-center gap-1 font-semibold text-[11px] bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+            <Link
+              href="/schedule"
+              className="inline-flex items-center gap-1 font-semibold text-[11px] bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200 transition-colors"
+            >
               <Calendar className="w-3 h-3 text-emerald-600" /> Sanjh 2026: Nov
-              14, 5:00 PM
-            </span>
+              14, 5:00 PM • View Programme
+            </Link>
           </div>
         </div>
       </div>

@@ -251,7 +251,15 @@ export default function Sanjh2026Page() {
         </div>
 
         {/* CTA */}
-        <div className="mt-12 text-center">
+        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+          <Link
+            href="/schedule"
+            className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-white hover:bg-zinc-50 text-orange-900 border border-orange-200 font-bold text-sm shadow-xs transition-all"
+          >
+            <Clock className="w-4 h-4 text-orange-600" />
+            View Full Minute-to-Minute Programme (24 Slots)
+          </Link>
+
           <Link
             href="/sanjh-2026/register"
             className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md transition-all"

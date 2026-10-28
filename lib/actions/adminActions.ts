@@ -255,3 +255,158 @@ export async function deleteRegistration(
     return { success: false, error: error?.message || "Failed to delete registration" };
   }
 }
+
+/**
+ * Review an alumnus's application to perform on stage at Sanjh 2026.
+ * Admin can approve or reject with optional remarks.
+ */
+export async function reviewPerformanceApplication(
+  id: string,
+  decision: "approved" | "rejected",
+  adminRemarks?: string,
+  reviewedBy?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+
+    const now = new Date().toISOString();
+    const docRef = db.collection("alumni_registrations").doc(id);
+
+    await docRef.update({
+      performerStatus: decision,
+      "performanceApplication.status": decision,
+      "performanceApplication.reviewedAt": now,
+      "performanceApplication.reviewedBy": reviewedBy || "Admin",
+      "performanceApplication.adminRemarks": adminRemarks?.trim() || "",
+      updatedAt: now,
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error reviewing performance application:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to review performance application",
+    };
+  }
+}
+
+/**
+ * Fetch all alumni who applied to perform on stage with their application details.
+ */
+export async function getPerformanceApplications(
+  statusFilter: "all" | "pending" | "approved" | "rejected" = "all"
+): Promise<{
+  success: boolean;
+  data?: any[];
+  error?: string;
+}> {
+  try {
+    const snapshot = await db
+      .collection("alumni_registrations")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const applications: any[] = [];
+
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      const perf = data.performanceApplication;
+      if (perf && perf.applied) {
+        if (statusFilter === "all" || perf.status === statusFilter || data.performerStatus === statusFilter) {
+          applications.push({
+            id: doc.id,
+            regNumber: data.regNumber,
+            fullName: data.fullName,
+            email: data.email,
+            phone: data.phone,
+            degree: data.degree,
+            branch: data.branch,
+            passingYear: data.passingYear,
+            era: data.era,
+            currentDesignation: data.currentDesignation,
+            organization: data.organization,
+            hasPass: Boolean(data.hasPass || data.passStatus === "active" || data.paymentStatus === "completed"),
+            passStatus: data.passStatus || "none",
+            performerStatus: data.performerStatus || perf.status || "pending",
+            performance: perf,
+            createdAt: data.createdAt,
+          });
+        }
+      }
+    });
+
+    return { success: true, data: applications };
+  } catch (error: any) {
+    console.error("Error fetching performance applications:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch performance applications",
+    };
+  }
+}
+
+/**
+ * Manually issue a complimentary Alumni Meet Pass (for VIPs, Faculty, or special guests)
+ */
+export async function issueComplimentaryPass(
+  id: string,
+  reason?: string,
+  issuedBy?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+
+    const now = new Date().toISOString();
+    await db.collection("alumni_registrations").doc(id).update({
+      hasPass: true,
+      passStatus: "active",
+      passPrice: 0,
+      passIssuedAt: now,
+      amount: 0,
+      paymentStatus: "completed",
+      paymentDetails: {
+        transactionId: `COMP-${Date.now().toString().slice(-6)}`,
+        paymentMethod: `Complimentary Pass (${reason || "Admin Grant"})`,
+        paidAt: now,
+        referenceNumber: `Issued by ${issuedBy || "Admin"}`,
+      },
+      updatedAt: now,
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error issuing complimentary pass:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to issue pass",
+    };
+  }
+}
+
+/**
+ * Revoke an event pass
+ */
+export async function revokePass(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+
+    const now = new Date().toISOString();
+    await db.collection("alumni_registrations").doc(id).update({
+      hasPass: false,
+      passStatus: "cancelled",
+      updatedAt: now,
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error revoking pass:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to revoke pass",
+    };
+  }
+}
+

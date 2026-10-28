@@ -86,13 +86,18 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/schedule" className="hover:text-orange-600 transition-colors font-medium text-orange-800">
+                  Minute-to-Minute Programme (Schedule)
+                </Link>
+              </li>
+              <li>
                 <Link href="/about" className="hover:text-orange-600 transition-colors">
                   University History & Evolution
                 </Link>
               </li>
               <li>
                 <Link href="/sanjh-2026/register" className="hover:text-orange-600 transition-colors">
-                  Alumni & Student Registration
+                  Alumni Registration & Meet Pass
                 </Link>
               </li>
               <li>

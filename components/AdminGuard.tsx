@@ -209,6 +209,13 @@ export default function AdminGuard({
                 Sanjh Registrations
               </Link>
               <Link
+                href="/admin/performers"
+                className="px-3 py-2 rounded-xl text-amber-800 hover:bg-amber-50 hover:text-amber-950 transition-colors font-bold flex items-center gap-1.5"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                <span>Stage Performers</span>
+              </Link>
+              <Link
                 href="/admin/alumni-registrations"
                 className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
               >
@@ -272,6 +279,13 @@ export default function AdminGuard({
               className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0"
             >
               Registrations
+            </Link>
+            <Link
+              href="/admin/performers"
+              className="px-2.5 py-1 rounded-lg text-amber-800 font-bold hover:bg-amber-50 shrink-0 flex items-center gap-1"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              Performers
             </Link>
             <Link
               href="/admin/admins"

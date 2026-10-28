@@ -9,16 +9,14 @@ import {
   createAlumniRegistration,
   getAlumniRegistrationByEmail,
 } from "@/lib/actions/alumniActions";
-import type { AlumniRegistration, RegistrantType } from "@/lib/types";
+import type { AlumniRegistration } from "@/lib/types";
 import {
   GraduationCap,
-  Users,
   Sparkles,
   Award,
   CheckCircle2,
   Lock,
   ArrowRight,
-  ArrowLeft,
   Loader2,
   AlertCircle,
   Ticket,
@@ -29,6 +27,10 @@ import {
   Building2,
   Briefcase,
   Music,
+  ShieldCheck,
+  Heart,
+  Globe,
+  Share2,
 } from "lucide-react";
 
 export default function SanjhRegisterPage() {
@@ -38,12 +40,11 @@ export default function SanjhRegisterPage() {
   const [checkingExisting, setCheckingExisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [newlyRegisteredId, setNewlyRegisteredId] = useState<string | null>(null);
+  const [newlyRegNumber, setNewlyRegNumber] = useState<string | null>(null);
 
-  // Selection: alumni or student
-  const [selectedType, setSelectedType] = useState<RegistrantType | null>(null);
-
-  // Alumni Form (using useForm)
-  const alumniForm = useForm({
+  // Alumni Registration Form (Registration is 100% Free)
+  const formState = useForm({
     fullName: "",
     email: "",
     phone: "",
@@ -60,28 +61,7 @@ export default function SanjhRegisterPage() {
     country: "India",
     linkedin: "",
     attendanceType: "in-person",
-    culturalInterest: "none",
-    culturalDetails: "",
     guestCount: "0",
-    dietaryPreference: "veg",
-    memoriesMessage: "",
-  });
-
-  // Student Form (using useForm)
-  const studentForm = useForm({
-    fullName: "",
-    email: "",
-    phone: "",
-    whatsapp: "",
-    degree: "B.Tech",
-    branch: "Computer Science & Engineering (CSE)",
-    currentSemester: "6th Semester (3rd Year)",
-    rollNumber: "",
-    hostelOrDayScholar: "Hostel Resident",
-    attendanceType: "in-person",
-    culturalInterest: "none",
-    culturalDetails: "",
-    volunteerInterest: "yes",
     dietaryPreference: "veg",
     memoriesMessage: "",
   });
@@ -89,13 +69,9 @@ export default function SanjhRegisterPage() {
   // Pre-fill user data upon Google auth
   useEffect(() => {
     if (user?.email) {
-      alumniForm.setFields({
+      formState.setFields({
         email: user.email,
-        fullName: user.displayName || alumniForm.form.fullName || "",
-      });
-      studentForm.setFields({
-        email: user.email,
-        fullName: user.displayName || studentForm.form.fullName || "",
+        fullName: user.displayName || formState.form.fullName || "",
       });
 
       setCheckingExisting(true);
@@ -110,14 +86,14 @@ export default function SanjhRegisterPage() {
     }
   }, [user]);
 
-  // Handle Alumni Submission (₹1000 Fee -> redirects to payment)
+  // Handle Alumni Submission (Free ₹0)
   const handleAlumniSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setServerError(null);
 
-    const f = alumniForm.form;
-    if (!f.fullName || !f.email || !f.phone || !f.currentDesignation) {
-      setServerError("Please fill in all required fields (Name, Phone, Designation).");
+    const f = formState.form;
+    if (!f.fullName || !f.email || !f.phone) {
+      setServerError("Please fill in all required fields (Full Name, Phone).");
       return;
     }
 
@@ -125,7 +101,6 @@ export default function SanjhRegisterPage() {
 
     try {
       const res = await createAlumniRegistration({
-        registrantType: "alumni",
         fullName: f.fullName,
         email: f.email,
         phone: f.phone,
@@ -142,65 +117,17 @@ export default function SanjhRegisterPage() {
         country: f.country,
         linkedin: f.linkedin,
         attendanceType: f.attendanceType as any,
-        culturalInterest: f.culturalInterest as any,
-        culturalDetails: f.culturalDetails,
         guestCount: parseInt(f.guestCount) || 0,
-        dietaryPreference: f.dietaryPreference as any,
-        memoriesMessage: f.memoriesMessage,
-        amount: 1000,
-      });
-
-      if (res.success && res.id) {
-        router.push(`/payment/${res.id}`);
-      } else {
-        setServerError(res.error || "Failed to submit alumni registration.");
-      }
-    } catch (err: any) {
-      setServerError(err?.message || "An unexpected error occurred.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Handle Student Submission (₹0 / Free -> redirects straight to ticket)
-  const handleStudentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setServerError(null);
-
-    const f = studentForm.form;
-    if (!f.fullName || !f.email || !f.phone || !f.rollNumber) {
-      setServerError("Please fill in all required fields (Name, Phone, Student Roll Number).");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const res = await createAlumniRegistration({
-        registrantType: "student",
-        fullName: f.fullName,
-        email: f.email,
-        phone: f.phone,
-        whatsapp: f.whatsapp || f.phone,
-        degree: f.degree,
-        branch: f.branch,
-        rollNumber: f.rollNumber,
-        currentSemester: f.currentSemester,
-        hostelOrDayScholar: f.hostelOrDayScholar,
-        volunteerInterest: f.volunteerInterest === "yes",
-        attendanceType: "in-person",
-        culturalInterest: f.culturalInterest as any,
-        culturalDetails: f.culturalDetails,
-        guestCount: 0,
         dietaryPreference: f.dietaryPreference as any,
         memoriesMessage: f.memoriesMessage,
         amount: 0,
       });
 
       if (res.success && res.id) {
-        router.push(`/ticket/${res.id}`);
+        setNewlyRegisteredId(res.id);
+        setNewlyRegNumber(res.regNumber || null);
       } else {
-        setServerError(res.error || "Failed to complete student registration.");
+        setServerError(res.error || "Failed to submit alumni registration.");
       }
     } catch (err: any) {
       setServerError(err?.message || "An unexpected error occurred.");
@@ -229,29 +156,21 @@ export default function SanjhRegisterPage() {
 
           <div className="space-y-2">
             <span className="text-xs font-bold uppercase tracking-widest text-orange-700">
-              Identity Verification
+              SBSSU Alumni Portal
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900">
-              Sign In Before Registering
+              Sign In to Register with University
             </h1>
             <p className="text-sm text-zinc-600 max-w-md mx-auto leading-relaxed">
-              To verify applicant authenticity for Sanjh 2026 and link your official participation pass, please sign in with your Google account.
+              Please sign in with your Google account so the university can verify your identity and link your alumni registration record.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
-            <div className="p-3.5 rounded-2xl bg-orange-50/70 border border-orange-200 text-xs">
-              <span className="font-bold text-orange-950 block">For Alumni</span>
-              <span className="text-zinc-600">
-                ₹1,000 registration fee. Includes cultural pass, souvenir kit, and gala dinner.
-              </span>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-xs">
-              <span className="font-bold text-emerald-950 block">For Current Students</span>
-              <span className="text-zinc-600">
-                100% Free (₹0). SECA cultural participation and official certificates.
-              </span>
-            </div>
+          <div className="p-4 rounded-2xl bg-orange-50/70 border border-orange-200 text-xs text-left space-y-1.5">
+            <span className="font-bold text-orange-950 block">Registration is 100% Free (₹0)</span>
+            <p className="text-zinc-600">
+              Provide your academic and professional details so Shaheed Bhagat Singh State University knows about its proud graduates. Event Passes for the Alumni Meet (₹1,000) are issued separately after registration.
+            </p>
           </div>
 
           <button
@@ -283,19 +202,89 @@ export default function SanjhRegisterPage() {
     );
   }
 
-  // 2. Existing Registration Lookup
+  // 2. Newly Registered Success Screen
+  if (newlyRegisteredId) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-14 space-y-6">
+        <div className="bg-white rounded-3xl border-2 border-emerald-300 p-8 sm:p-10 shadow-lg text-center space-y-6">
+          <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center animate-bounce">
+            <CheckCircle2 className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              Registration Successful • 100% Free
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-black text-zinc-900">
+              Welcome to the SBSSU Alumni Network!
+            </h1>
+            <p className="text-sm text-zinc-600 max-w-lg mx-auto">
+              Your details have been registered with Shaheed Bhagat Singh State University. Thank you for staying connected with your alma mater.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-left space-y-2">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Alumni Registration Number:</span>
+              <strong className="font-mono text-zinc-900 text-sm">{newlyRegNumber}</strong>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Registered Email:</span>
+              <span className="font-semibold text-zinc-800">{user.email}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Alumni Directory Status:</span>
+              <span className="text-emerald-700 font-bold">✓ Active Record</span>
+            </div>
+          </div>
+
+          {/* Callout: Sanjh 2026 Meet Pass */}
+          <div className="p-5 rounded-2xl bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 text-left space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-orange-600" />
+              <span className="font-extrabold text-sm text-orange-950">
+                Attending the 1st Alumni Meet & Sanjh 2026?
+              </span>
+            </div>
+            <p className="text-xs text-zinc-600 leading-relaxed">
+              To visit campus on <strong>November 14, 2026</strong>, enjoy high tea, receive your souvenir kit, join the grand gala dinner, and be eligible to perform on stage, get your official <strong>Alumni Meet Event Pass (₹1,000)</strong>.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
+              <Link
+                href={`/payment/${newlyRegisteredId}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shadow-xs"
+              >
+                <Ticket className="w-4 h-4" />
+                Get Alumni Meet Pass (₹1,000)
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href={`/ticket/${newlyRegisteredId}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-white hover:bg-zinc-50 text-zinc-700 font-semibold text-xs border border-zinc-200 transition-colors"
+              >
+                View Alumni Profile Card
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 3. Existing Registration Found
   if (existingReg) {
-    const isStu = existingReg.registrantType === "student";
+    const hasPass = Boolean(existingReg.hasPass || existingReg.passStatus === "active");
+
     return (
       <div className="max-w-3xl mx-auto px-4 py-14 space-y-6">
-        <div className="bg-white rounded-3xl border border-emerald-200 p-8 shadow-sm space-y-6">
+        <div className="bg-white rounded-3xl border border-orange-200 p-8 shadow-sm space-y-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center shrink-0">
               <UserCheck className="w-7 h-7" />
             </div>
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                {isStu ? "Student Registration Active" : "Alumni Registration Active"}
+              <span className="text-xs font-bold uppercase tracking-wider text-orange-800 bg-orange-100 px-2.5 py-0.5 rounded-full">
+                Alumni Registration On Record
               </span>
               <h2 className="text-2xl font-bold text-zinc-900 mt-1">
                 Welcome back, {existingReg.fullName}!
@@ -308,55 +297,80 @@ export default function SanjhRegisterPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs">
             <div>
-              <span className="text-zinc-500 block">Pass / Reg ID:</span>
+              <span className="text-zinc-500 block">Alumni Reg ID:</span>
               <span className="font-mono font-bold text-zinc-900 text-sm">
                 {existingReg.regNumber}
               </span>
             </div>
             <div>
-              <span className="text-zinc-500 block">Registration Type:</span>
-              <span className="font-bold text-zinc-800 capitalize">
-                {isStu ? "Current Student (Free)" : "Alumnus (₹1,000)"}
+              <span className="text-zinc-500 block">Batch & Era:</span>
+              <span className="font-bold text-zinc-800">
+                Class of {existingReg.passingYear} ({existingReg.era})
               </span>
             </div>
             <div>
-              <span className="text-zinc-500 block">Payment / Pass Status:</span>
+              <span className="text-zinc-500 block">Sanjh 2026 Meet Pass:</span>
               <span
                 className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-md ${
-                  existingReg.paymentStatus === "completed" || existingReg.paymentStatus === "free"
+                  hasPass
                     ? "bg-emerald-100 text-emerald-800"
-                    : "bg-amber-100 text-amber-800"
+                    : "bg-amber-100 text-amber-900"
                 }`}
               >
-                {existingReg.paymentStatus === "completed" || existingReg.paymentStatus === "free"
-                  ? "✓ Confirmed Pass"
-                  : `⏳ Pending (₹${existingReg.amount})`}
+                {hasPass ? "✓ Active Pass (₹1,000 Paid)" : "No Pass Active (Registered Only)"}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {existingReg.paymentStatus === "completed" || existingReg.paymentStatus === "free" ? (
+          {hasPass ? (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <strong className="block text-emerald-900 font-bold">
+                  You have an Active Sanjh 2026 Event Pass!
+                </strong>
+                <span className="text-emerald-800">
+                  You can view your printable gate pass with barcode and apply for stage performances.
+                </span>
+              </div>
               <Link
                 href={`/ticket/${existingReg.id}`}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-xs"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shrink-0 shadow-xs"
               >
                 <Ticket className="w-4 h-4" />
-                View & Print Digital Pass
+                View Event Pass & Apply to Perform
               </Link>
-            ) : (
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-xs text-orange-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <strong className="block text-orange-900 font-bold">
+                  Planning to Attend the Alumni Meet in Person?
+                </strong>
+                <span className="text-zinc-600">
+                  Registration is complete. To physically attend the celebration on Nov 14, 2026, get your official Event Pass for ₹1,000.
+                </span>
+              </div>
               <Link
                 href={`/payment/${existingReg.id}`}
-                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs transition-colors shadow-xs"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shrink-0 shadow-xs"
               >
                 <Sparkles className="w-4 h-4" />
-                Complete Alumni Mock Payment (₹1,000)
+                Get Alumni Meet Pass (₹1,000)
               </Link>
-            )}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-xs">
+            <Link
+              href={`/ticket/${existingReg.id}`}
+              className="text-zinc-600 hover:text-orange-600 font-semibold"
+            >
+              View Alumni Profile Card →
+            </Link>
 
             <button
               onClick={() => setExistingReg(null)}
-              className="text-xs text-zinc-500 hover:text-zinc-800 underline px-3 py-2"
+              className="text-zinc-400 hover:text-zinc-700 underline"
             >
               Submit another registration
             </button>
@@ -366,157 +380,9 @@ export default function SanjhRegisterPage() {
     );
   }
 
-  // 3. Step: Choose Alumni or Student if not chosen yet
-  if (!selectedType) {
-    return (
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-14 space-y-8">
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-900 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-            Sanjh 2026 Registration Portal
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-zinc-900 tracking-tight">
-            Select Your Registration Category
-          </h1>
-          <p className="text-sm text-zinc-600">
-            Please indicate whether you are an alumnus/alumna of the institution or currently studying as an enrolled student at SBSSU.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Card A: Alumni (₹1,000) */}
-          <div
-            onClick={() => setSelectedType("alumni")}
-            className="group cursor-pointer bg-white rounded-3xl border-2 border-orange-200 hover:border-orange-500 p-8 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-orange-100 text-orange-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <GraduationCap className="w-7 h-7" />
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-orange-800 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
-                  Alumni Registration
-                </span>
-                <h2 className="text-2xl font-bold text-zinc-900 mt-2">
-                  I am an Alumnus / Alumna
-                </h2>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Graduates of SBSCET (1995-2011), SBSSTC (2011-2021), or SBSSU.
-                </p>
-              </div>
-
-              <ul className="space-y-2 text-xs text-zinc-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span>Entry to Sanjh 2026 Cultural Function</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span>High Tea, Souvenir Alumni Kit & Gala Dinner</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
-                  <span>Eligible for Cultural Performances (Cert. included)</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="mt-8 pt-4 border-t border-zinc-100 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-zinc-500 block">Registration Fee</span>
-                <span className="text-2xl font-black text-orange-600">₹1,000</span>
-              </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 group-hover:bg-orange-700 text-white font-bold text-xs transition-colors shadow-2xs"
-              >
-                Proceed as Alumni
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Card B: Student (Free / ₹0) */}
-          <div
-            onClick={() => setSelectedType("student")}
-            className="group cursor-pointer bg-white rounded-3xl border-2 border-emerald-200 hover:border-emerald-500 p-8 shadow-xs hover:shadow-lg transition-all flex flex-col justify-between"
-          >
-            <div className="space-y-4">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Users className="w-7 h-7" />
-              </div>
-
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  Student Registration
-                </span>
-                <h2 className="text-2xl font-bold text-zinc-900 mt-2">
-                  I am a Current Student
-                </h2>
-                <p className="text-xs text-zinc-500 mt-1">
-                  Currently enrolled in regular degree programs at SBSSU Ferozepur.
-                </p>
-              </div>
-
-              <ul className="space-y-2 text-xs text-zinc-600">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Showcase talent: Dance, Music, Drama, Anchoring, Fine Arts</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>📜 <strong>Participation Certificates awarded to all participants!</strong></span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>SECA Student Volunteering & Networking with Alumni</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="mt-8 pt-4 border-t border-zinc-100 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-zinc-500 block">Registration Fee</span>
-                <span className="text-2xl font-black text-emerald-600">FREE (₹0)</span>
-              </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 group-hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-2xs"
-              >
-                Register as Student
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 4. Render Respective Forms
+  // 4. Main Alumni Registration Form (100% Free)
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-      {/* Switch Category Button */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => setSelectedType(null)}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-600 hover:text-orange-600 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Change Category (Currently: {selectedType.toUpperCase()})
-        </button>
-
-        <span
-          className={`text-xs font-bold px-3 py-1 rounded-full border ${
-            selectedType === "alumni"
-              ? "bg-orange-50 text-orange-800 border-orange-200"
-              : "bg-emerald-50 text-emerald-800 border-emerald-200"
-          }`}
-        >
-          {selectedType === "alumni" ? "Alumni Pass: ₹1,000" : "Student Delegate Pass: FREE (₹0)"}
-        </span>
-      </div>
-
       {serverError && (
         <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-center gap-3 text-rose-800 text-sm">
           <AlertCircle className="w-5 h-5 shrink-0" />
@@ -524,645 +390,321 @@ export default function SanjhRegisterPage() {
         </div>
       )}
 
-      {/* FORM 1: ALUMNI REGISTRATION FORM (₹1000) */}
-      {selectedType === "alumni" && (
-        <form
-          onSubmit={handleAlumniSubmit}
-          className="bg-white rounded-3xl border border-orange-200 p-6 sm:p-10 shadow-sm space-y-8"
-        >
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-900 text-xs font-semibold mb-2">
+      <form
+        onSubmit={handleAlumniSubmit}
+        className="bg-white rounded-3xl border border-orange-200 p-6 sm:p-10 shadow-sm space-y-8"
+      >
+        {/* Title Header */}
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-900 text-xs font-semibold">
               <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-              Alumni Registration Form • Sanjh 2026
+              Alumni Directory Registration
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
-              Alumni Meet 2026 Registration
-            </h1>
-            <p className="text-xs sm:text-sm text-zinc-500">
-              Registration Fee: ₹1,000 (Includes Sanjh 2026 Entry, Kit, High Tea & Gala Dinner).
-            </p>
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Registration Fee: 100% FREE (₹0)
+            </span>
           </div>
 
-          {/* Section: Personal Info */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2">
-              1. Personal & Contact Details
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Full Name <span className="text-orange-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="fullName"
-                  required
-                  value={alumniForm.form.fullName}
-                  onChange={alumniForm.handleChange}
-                  placeholder="e.g. Jaspreet Singh"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
+            Shaheed Bhagat Singh State University Alumni Registration
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-600 leading-relaxed">
+            Provide your details so your alma mater can maintain its permanent alumni directory and stay connected with your journey. If you plan to attend the <strong>1st Alumni Meet & Sanjh 2026</strong> on Nov 14, 2026, you can acquire your official Event Pass (₹1,000) right after completing registration.
+          </p>
+        </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Verified Google Email (Locked)
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  readOnly
-                  value={alumniForm.form.email}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-500 cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Phone / Mobile Number <span className="text-orange-600">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  required
-                  value={alumniForm.form.phone}
-                  onChange={alumniForm.handleChange}
-                  placeholder="e.g. +91 9876543210"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  WhatsApp Number
-                </label>
-                <input
-                  type="tel"
-                  name="whatsapp"
-                  value={alumniForm.form.whatsapp}
-                  onChange={alumniForm.handleChange}
-                  placeholder="If different from phone number"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Academic Background */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2">
-              2. Academic Era & Graduation Details
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Institution Era
-                </label>
-                <select
-                  name="era"
-                  value={alumniForm.form.era}
-                  onChange={alumniForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="SBSCET">SBSCET (1995 – 2011)</option>
-                  <option value="SBSSTC">SBSSTC (2011 – 2021)</option>
-                  <option value="SBSSU">SBSSU (2021 – Present)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Degree Program
-                </label>
-                <select
-                  name="degree"
-                  value={alumniForm.form.degree}
-                  onChange={alumniForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="B.Tech">B.Tech</option>
-                  <option value="M.Tech">M.Tech</option>
-                  <option value="BCA">BCA</option>
-                  <option value="MCA">MCA</option>
-                  <option value="MBA">MBA</option>
-                  <option value="BBA">BBA</option>
-                  <option value="B.Sc">B.Sc</option>
-                  <option value="Diploma">Diploma</option>
-                  <option value="PhD">PhD Scholar</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Passing Year / Batch
-                </label>
-                <select
-                  name="passingYear"
-                  value={alumniForm.form.passingYear}
-                  onChange={alumniForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  {Array.from({ length: 32 }, (_, i) => 2026 - i).map((yr) => (
-                    <option key={yr} value={String(yr)}>
-                      {yr}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Branch / Specialization
-                </label>
-                <select
-                  name="branch"
-                  value={alumniForm.form.branch}
-                  onChange={alumniForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="Computer Science & Engineering (CSE)">Computer Science & Engineering (CSE)</option>
-                  <option value="Electronics & Communication (ECE)">Electronics & Communication (ECE)</option>
-                  <option value="Mechanical Engineering (ME)">Mechanical Engineering (ME)</option>
-                  <option value="Civil Engineering (CE)">Civil Engineering (CE)</option>
-                  <option value="Electrical Engineering (EE)">Electrical Engineering (EE)</option>
-                  <option value="Chemical Engineering">Chemical Engineering</option>
-                  <option value="Information Technology (IT)">Information Technology (IT)</option>
-                  <option value="Management Studies">Management Studies</option>
-                  <option value="Applied Sciences">Applied Sciences</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  College Roll Number (Optional)
-                </label>
-                <input
-                  type="text"
-                  name="rollNumber"
-                  value={alumniForm.form.rollNumber}
-                  onChange={alumniForm.handleChange}
-                  placeholder="e.g. 1504562"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Professional */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2">
-              3. Professional Profile & Location
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Current Designation <span className="text-orange-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="currentDesignation"
-                  required
-                  value={alumniForm.form.currentDesignation}
-                  onChange={alumniForm.handleChange}
-                  placeholder="e.g. Senior Tech Lead / Director / Entrepreneur"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Company / Organization
-                </label>
-                <input
-                  type="text"
-                  name="organization"
-                  value={alumniForm.form.organization}
-                  onChange={alumniForm.handleChange}
-                  placeholder="e.g. Google / Infosys / Government of Punjab"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Current City
-                </label>
-                <input
-                  type="text"
-                  name="city"
-                  value={alumniForm.form.city}
-                  onChange={alumniForm.handleChange}
-                  placeholder="e.g. Chandigarh / Gurgaon / Toronto"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  LinkedIn Profile URL
-                </label>
-                <input
-                  type="url"
-                  name="linkedin"
-                  value={alumniForm.form.linkedin}
-                  onChange={alumniForm.handleChange}
-                  placeholder="https://linkedin.com/in/username"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Sanjh 2026 Cultural */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2">
-              4. Sanjh 2026 Cultural Extravaganza
-            </h2>
-
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs text-emerald-950">
-              <span className="font-bold flex items-center gap-1.5 text-emerald-900">
-                <Award className="w-4 h-4 text-emerald-700" />
-                Participation Certificates Guarantee:
-              </span>
-              <p className="mt-0.5">
-                📜 Participation Certificates will be awarded to all alumni and student participants!
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Cultural Performance Interest
-                </label>
-                <select
-                  name="culturalInterest"
-                  value={alumniForm.form.culturalInterest}
-                  onChange={alumniForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="none">Attending as Audience / Spectator</option>
-                  <option value="dance">Dance (Bhangra / Giddha / Solo)</option>
-                  <option value="music">Music (Singing / Instrumental / Band)</option>
-                  <option value="drama">Drama / Skit / Mimicry</option>
-                  <option value="anchoring">Anchoring & Stage Coordination</option>
-                  <option value="fine-arts">Fine Arts & Rangoli</option>
-                  <option value="poetry">Poetry / Shayari / Stand-Up</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Accompanying Family Guests
-                </label>
-                <select
-                  name="guestCount"
-                  value={alumniForm.form.guestCount}
-                  onChange={alumniForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="0">0 (Attending Solo)</option>
-                  <option value="1">1 Guest</option>
-                  <option value="2">2 Guests</option>
-                  <option value="3">3+ Guests</option>
-                </select>
-              </div>
+        {/* Section 1: Personal & Contact */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">1</span>
+            Personal & Contact Details
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Full Name <span className="text-orange-600">*</span>
+              </label>
+              <input
+                type="text"
+                name="fullName"
+                required
+                value={formState.form.fullName}
+                onChange={formState.handleChange}
+                placeholder="e.g. Jaspreet Singh"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Nostalgic Memory / Message for SBSSU & Juniors
+                Verified Google Email (Locked)
               </label>
-              <textarea
-                name="memoriesMessage"
-                rows={2}
-                value={alumniForm.form.memoriesMessage}
-                onChange={alumniForm.handleChange}
-                placeholder="Share a fond memory of hostel life, canteen discussions, or professors..."
+              <input
+                type="email"
+                name="email"
+                readOnly
+                value={formState.form.email}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-500 cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Phone / Mobile Number <span className="text-orange-600">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                required
+                value={formState.form.phone}
+                onChange={formState.handleChange}
+                placeholder="e.g. +91 9876543210"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                WhatsApp Number
+              </label>
+              <input
+                type="tel"
+                name="whatsapp"
+                value={formState.form.whatsapp}
+                onChange={formState.handleChange}
+                placeholder="If different from phone number"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
           </div>
+        </div>
 
-          {/* Alumni Fee Summary */}
-          <div className="p-4 rounded-2xl bg-orange-50/70 border border-orange-200 flex items-center justify-between">
+        {/* Section 2: Academic Background */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">2</span>
+            Academic Era & Graduation Details
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <span className="text-xs text-orange-900 font-semibold block">
-                Alumni Registration Fee
-              </span>
-              <span className="text-xs text-zinc-500">
-                Fixed standard pass including gala dinner and alumni kit
-              </span>
-            </div>
-            <div className="text-2xl font-black text-orange-600">
-              ₹1,000
-            </div>
-          </div>
-
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Saving Registration...
-                </>
-              ) : (
-                <>
-                  Proceed to Payment (₹1,000)
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* FORM 2: CURRENT STUDENT REGISTRATION FORM (FREE / ₹0) */}
-      {selectedType === "student" && (
-        <form
-          onSubmit={handleStudentSubmit}
-          className="bg-white rounded-3xl border border-emerald-200 p-6 sm:p-10 shadow-sm space-y-8"
-        >
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 text-xs font-semibold mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-              Student Registration • Sanjh 2026
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
-              SBSSU Student Delegate & Performer Registration
-            </h1>
-            <p className="text-xs sm:text-sm text-emerald-700 font-medium">
-              Free Registration (₹0) for all currently enrolled students of SBSSU. No payment required!
-            </p>
-          </div>
-
-          {/* Section: Student Identity */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-emerald-100 pb-2">
-              1. Student Details & College ID
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Full Name <span className="text-emerald-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="fullName"
-                  required
-                  value={studentForm.form.fullName}
-                  onChange={studentForm.handleChange}
-                  placeholder="e.g. Simran Kaur"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Verified Google Email (Locked)
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  readOnly
-                  value={studentForm.form.email}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-sm text-zinc-500 cursor-not-allowed"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Student University Roll Number <span className="text-emerald-600">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="rollNumber"
-                  required
-                  value={studentForm.form.rollNumber}
-                  onChange={studentForm.handleChange}
-                  placeholder="e.g. 2104567"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Phone / WhatsApp Number <span className="text-emerald-600">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  required
-                  value={studentForm.form.phone}
-                  onChange={studentForm.handleChange}
-                  placeholder="e.g. +91 9876543210"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Academic Details */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-emerald-100 pb-2">
-              2. Program, Department & Residence
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Degree Program
-                </label>
-                <select
-                  name="degree"
-                  value={studentForm.form.degree}
-                  onChange={studentForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="B.Tech">B.Tech</option>
-                  <option value="M.Tech">M.Tech</option>
-                  <option value="BCA">BCA</option>
-                  <option value="MCA">MCA</option>
-                  <option value="BBA">BBA</option>
-                  <option value="MBA">MBA</option>
-                  <option value="B.Sc">B.Sc</option>
-                  <option value="Diploma">Diploma (Polytechnic)</option>
-                  <option value="PhD">PhD</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Branch / Department
-                </label>
-                <select
-                  name="branch"
-                  value={studentForm.form.branch}
-                  onChange={studentForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="Computer Science & Engineering (CSE)">Computer Science (CSE)</option>
-                  <option value="Electronics & Communication (ECE)">Electronics (ECE)</option>
-                  <option value="Mechanical Engineering (ME)">Mechanical (ME)</option>
-                  <option value="Civil Engineering (CE)">Civil (CE)</option>
-                  <option value="Electrical Engineering (EE)">Electrical (EE)</option>
-                  <option value="Chemical Engineering">Chemical</option>
-                  <option value="Information Technology (IT)">IT</option>
-                  <option value="Computer Applications">Computer Applications</option>
-                  <option value="Management Studies">Management Studies</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Current Semester / Year
-                </label>
-                <select
-                  name="currentSemester"
-                  value={studentForm.form.currentSemester}
-                  onChange={studentForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="1st / 2nd Sem (1st Year)">1st Year (1st / 2nd Sem)</option>
-                  <option value="3rd / 4th Sem (2nd Year)">2nd Year (3rd / 4th Sem)</option>
-                  <option value="5th / 6th Sem (3rd Year)">3rd Year (5th / 6th Sem)</option>
-                  <option value="7th / 8th Sem (Final Year)">Final Year (7th / 8th Sem)</option>
-                  <option value="Postgraduate / PhD">Postgraduate / PhD</option>
-                </select>
-              </div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Institution Era
+              </label>
+              <select
+                name="era"
+                value={formState.form.era}
+                onChange={formState.handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="SBSCET">SBSCET (1995 – 2011)</option>
+                <option value="SBSSTC">SBSSTC (2011 – 2021)</option>
+                <option value="SBSSU">SBSSU (2021 – Present)</option>
+              </select>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Campus Residence
+                Degree Program
               </label>
               <select
-                name="hostelOrDayScholar"
-                value={studentForm.form.hostelOrDayScholar}
-                onChange={studentForm.handleChange}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                name="degree"
+                value={formState.form.degree}
+                onChange={formState.handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
-                <option value="Day Scholar">Day Scholar (Local / Commuter)</option>
-                <option value="Boys Hostel No. 1">Boys Hostel No. 1</option>
-                <option value="Boys Hostel No. 2">Boys Hostel No. 2</option>
-                <option value="Boys Hostel No. 3">Boys Hostel No. 3</option>
-                <option value="Boys Hostel No. 4">Boys Hostel No. 4</option>
-                <option value="Girls Hostel">Girls Hostel</option>
+                <option value="B.Tech">B.Tech</option>
+                <option value="M.Tech">M.Tech</option>
+                <option value="BCA">BCA</option>
+                <option value="MCA">MCA</option>
+                <option value="MBA">MBA</option>
+                <option value="BBA">BBA</option>
+                <option value="B.Sc">B.Sc</option>
+                <option value="Diploma">Diploma</option>
+                <option value="PhD">PhD Scholar</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Passing Year / Batch
+              </label>
+              <select
+                name="passingYear"
+                value={formState.form.passingYear}
+                onChange={formState.handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                {Array.from({ length: 32 }, (_, i) => 2026 - i).map((yr) => (
+                  <option key={yr} value={String(yr)}>
+                    {yr}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
-          {/* Section: SECA Cultural Talent */}
-          <div className="space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-emerald-100 pb-2">
-              3. SECA Cultural Participation & Talent
-            </h2>
-
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs text-emerald-950 space-y-1">
-              <span className="font-bold flex items-center gap-1.5 text-emerald-900">
-                <Award className="w-4 h-4 text-emerald-700" />
-                📜 Official Participation Certificate:
-              </span>
-              <p>
-                Participation Certificates will be awarded to all participants! We encourage maximum participation from all students. Step forward, highlight your skills, and make this event truly memorable.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Showcase Talent in:
-                </label>
-                <select
-                  name="culturalInterest"
-                  value={studentForm.form.culturalInterest}
-                  onChange={studentForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="none">Attending as Audience / Student Delegate</option>
-                  <option value="dance">Dance (Bhangra / Giddha / Solo / Western)</option>
-                  <option value="music">Music (Vocal / Instrumental / Rock Band)</option>
-                  <option value="drama">Drama / Skit / Mimicry / Nukkad Natak</option>
-                  <option value="anchoring">Anchoring & Stage Hosting</option>
-                  <option value="fine-arts">Fine Arts & Rangoli Contest</option>
-                  <option value="poetry">Poetry / Shayari / Stand-Up Comedy</option>
-                  <option value="other">Other Talent</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Volunteer for SECA Organizing Team?
-                </label>
-                <select
-                  name="volunteerInterest"
-                  value={studentForm.form.volunteerInterest}
-                  onChange={studentForm.handleChange}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                >
-                  <option value="yes">Yes, I want to volunteer with SECA</option>
-                  <option value="no">No, only participating / attending</option>
-                </select>
-              </div>
-            </div>
-
-            {studentForm.form.culturalInterest !== "none" && (
-              <div>
-                <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  Act Description / Group Team Members
-                </label>
-                <input
-                  type="text"
-                  name="culturalDetails"
-                  value={studentForm.form.culturalDetails}
-                  onChange={studentForm.handleChange}
-                  placeholder="e.g. Solo folk singing / 6-member Giddha squad with roll numbers"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Student Fee Summary (Free) */}
-          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 flex items-center justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <span className="text-xs text-emerald-950 font-bold block">
-                Student Registration Fee
-              </span>
-              <span className="text-xs text-emerald-800">
-                100% Free for SBSSU Students • Instant Pass Generation
-              </span>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Branch / Department
+              </label>
+              <select
+                name="branch"
+                value={formState.form.branch}
+                onChange={formState.handleChange}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="Computer Science & Engineering (CSE)">Computer Science & Engineering (CSE)</option>
+                <option value="Electronics & Communication (ECE)">Electronics & Communication (ECE)</option>
+                <option value="Mechanical Engineering (ME)">Mechanical Engineering (ME)</option>
+                <option value="Civil Engineering (CE)">Civil Engineering (CE)</option>
+                <option value="Electrical Engineering (EE)">Electrical Engineering (EE)</option>
+                <option value="Chemical Engineering">Chemical Engineering</option>
+                <option value="Information Technology (IT)">Information Technology (IT)</option>
+                <option value="Management Studies">Management Studies</option>
+                <option value="Applied Sciences">Applied Sciences</option>
+              </select>
             </div>
-            <div className="text-2xl font-black text-emerald-700">
-              ₹0 (FREE)
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                College Roll Number (Optional)
+              </label>
+              <input
+                type="text"
+                name="rollNumber"
+                value={formState.form.rollNumber}
+                onChange={formState.handleChange}
+                placeholder="e.g. 1504562"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
             </div>
+          </div>
+        </div>
+
+        {/* Section 3: Professional & Location */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">3</span>
+            Professional Profile & Location
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Current Designation / Role
+              </label>
+              <input
+                type="text"
+                name="currentDesignation"
+                value={formState.form.currentDesignation}
+                onChange={formState.handleChange}
+                placeholder="e.g. Senior Software Engineer / Director / Founder"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Company / Organization
+              </label>
+              <input
+                type="text"
+                name="organization"
+                value={formState.form.organization}
+                onChange={formState.handleChange}
+                placeholder="e.g. Microsoft / Government of Punjab / Freelance"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                Current City & State
+              </label>
+              <input
+                type="text"
+                name="city"
+                value={formState.form.city}
+                onChange={formState.handleChange}
+                placeholder="e.g. Chandigarh, Punjab"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                LinkedIn Profile URL
+              </label>
+              <input
+                type="url"
+                name="linkedin"
+                value={formState.form.linkedin}
+                onChange={formState.handleChange}
+                placeholder="https://linkedin.com/in/username"
+                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Alumni Memories Message */}
+        <div className="space-y-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">4</span>
+            Nostalgic Message / Words for the University
+          </h2>
+          <div>
+            <label className="block text-xs font-semibold text-zinc-700 mb-1">
+              Message or Fond Memories (Optional)
+            </label>
+            <textarea
+              name="memoriesMessage"
+              rows={3}
+              value={formState.form.memoriesMessage}
+              onChange={formState.handleChange}
+              placeholder="Share a fond memory from your college days, or words of encouragement for current students..."
+              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+
+        {/* Info Card: Registration vs Event Pass */}
+        <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 space-y-1">
+          <div className="font-bold flex items-center gap-1.5 text-amber-900">
+            <ShieldCheck className="w-4 h-4 text-amber-700" />
+            Notice regarding Event Pass & Stage Performances:
+          </div>
+          <p className="text-zinc-700">
+            Registration submits your details to the university alumni database for <strong>free</strong>. Visiting the campus for the Alumni Meet on Nov 14, 2026 requires an <strong>Event Pass (₹1,000)</strong>. Alumni holding a valid event pass can also apply to perform on stage during Sanjh 2026!
+          </p>
+        </div>
+
+        {/* Submit Button */}
+        <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-100">
+          <div className="text-xs text-zinc-500">
+            By submitting, you agree to share your alumni details with SBSSU.
           </div>
 
-          <div className="pt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating Student Pass...
-                </>
-              ) : (
-                <>
-                  Complete Free Student Registration
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      )}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm shadow-md transition-all disabled:opacity-50"
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Registering Details...</span>
+              </>
+            ) : (
+              <>
+                <span>Complete Free Registration (₹0)</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

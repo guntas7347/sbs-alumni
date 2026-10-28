@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { getAllRegistrations } from "@/lib/actions/alumniActions";
-import type { AlumniRegistration, RegistrantType } from "@/lib/types";
+import type { AlumniRegistration } from "@/lib/types";
 import {
   Users,
   Search,
@@ -18,15 +18,18 @@ import {
   Award,
   RefreshCw,
   GraduationCap,
-  BookOpen,
+  Ticket,
+  ShieldCheck,
+  XCircle,
+  Sparkles,
 } from "lucide-react";
 
 export default function RegistrationsTable({
-  title = "Sanjh 2026 & Alumni Registrations",
-  initialTypeFilter = "all",
+  title = "SBSSU Alumni Registrations & Event Passes",
+  initialFilter = "all",
 }: {
   title?: string;
-  initialTypeFilter?: "all" | "alumni" | "student";
+  initialFilter?: "all" | "pass" | "free" | "performers";
 }) {
   const [registrations, setRegistrations] = useState<AlumniRegistration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,9 +37,8 @@ export default function RegistrationsTable({
 
   // Filters
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "alumni" | "student">(initialTypeFilter);
-  const [paymentFilter, setPaymentFilter] = useState<"all" | "completed" | "pending">("all");
-  const [culturalFilter, setCulturalFilter] = useState<string>("all");
+  const [tabFilter, setTabFilter] = useState<"all" | "pass" | "free" | "performers">(initialFilter);
+  const [checkInFilter, setCheckInFilter] = useState<"all" | "checkedIn" | "notCheckedIn">("all");
 
   const loadData = () => {
     setRefreshing(true);
@@ -58,14 +60,17 @@ export default function RegistrationsTable({
   }, []);
 
   // Compute category counts
-  const alumniCount = useMemo(
-    () => registrations.filter((r) => r.registrantType === "alumni").length,
-    [registrations]
-  );
-  const studentCount = useMemo(
-    () => registrations.filter((r) => r.registrantType === "student").length,
-    [registrations]
-  );
+  const counts = useMemo(() => {
+    const total = registrations.length;
+    const passCount = registrations.filter(
+      (r) => r.hasPass || r.passStatus === "active" || r.paymentStatus === "completed"
+    ).length;
+    const freeCount = total - passCount;
+    const performerCount = registrations.filter(
+      (r) => r.performerStatus && r.performerStatus !== "none"
+    ).length;
+    return { total, passCount, freeCount, performerCount };
+  }, [registrations]);
 
   const filteredRegistrations = useMemo(() => {
     return registrations.filter((reg) => {
@@ -78,73 +83,79 @@ export default function RegistrationsTable({
         reg.phone?.toLowerCase().includes(q) ||
         reg.regNumber?.toLowerCase().includes(q) ||
         reg.rollNumber?.toLowerCase().includes(q) ||
-        reg.organization?.toLowerCase().includes(q);
+        reg.organization?.toLowerCase().includes(q) ||
+        reg.currentDesignation?.toLowerCase().includes(q);
 
-      // Type Filter (Alumni vs Student)
-      const matchesType =
-        typeFilter === "all" || reg.registrantType === typeFilter;
-
-      // Payment
-      const matchesPayment =
-        paymentFilter === "all" ||
-        (paymentFilter === "completed"
-          ? reg.paymentStatus === "completed" || reg.paymentStatus === "free"
-          : reg.paymentStatus === "pending");
-
-      // Cultural
-      const matchesCultural =
-        culturalFilter === "all"
+      // Pass / Tab filter
+      const hasPass = Boolean(
+        reg.hasPass || reg.passStatus === "active" || reg.paymentStatus === "completed"
+      );
+      const matchesTab =
+        tabFilter === "all"
           ? true
-          : culturalFilter === "performer"
-          ? reg.culturalInterest && reg.culturalInterest !== "none"
-          : reg.culturalInterest === "none";
+          : tabFilter === "pass"
+          ? hasPass
+          : tabFilter === "free"
+          ? !hasPass
+          : reg.performerStatus && reg.performerStatus !== "none";
 
-      return matchesSearch && matchesType && matchesPayment && matchesCultural;
+      // Gate Check-in
+      const matchesCheckIn =
+        checkInFilter === "all"
+          ? true
+          : checkInFilter === "checkedIn"
+          ? reg.checkedIn
+          : !reg.checkedIn;
+
+      return matchesSearch && matchesTab && matchesCheckIn;
     });
-  }, [registrations, search, typeFilter, paymentFilter, culturalFilter]);
+  }, [registrations, search, tabFilter, checkInFilter]);
 
   const handleExportCSV = () => {
     if (filteredRegistrations.length === 0) return;
 
     const headers = [
       "Registration Number",
-      "Type",
       "Full Name",
       "Email",
       "Phone",
       "Degree",
       "Branch",
-      "Batch/Semester",
-      "Roll Number",
-      "Era/Residence",
-      "Designation/Org",
-      "Cultural Interest",
-      "Cultural Details",
-      "Amount Paid",
-      "Payment Status",
-      "Checked In",
+      "Passing Year",
+      "Era",
+      "Current Designation",
+      "Company/Org",
+      "Has Event Pass (₹1000)",
+      "Pass Status",
+      "Stage Performer Status",
+      "Act Title",
+      "Gate Checked-In",
       "Created At",
     ];
 
-    const rows = filteredRegistrations.map((r) => [
-      `"${r.regNumber}"`,
-      `"${r.registrantType.toUpperCase()}"`,
-      `"${r.fullName}"`,
-      `"${r.email}"`,
-      `"${r.phone}"`,
-      `"${r.degree}"`,
-      `"${r.branch}"`,
-      `"${r.registrantType === 'student' ? (r.currentSemester || '') : (r.passingYear || '')}"`,
-      `"${r.rollNumber || ''}"`,
-      `"${r.registrantType === 'student' ? (r.hostelOrDayScholar || '') : (r.era || '')}"`,
-      `"${r.currentDesignation ? `${r.currentDesignation} at ${r.organization || ''}` : ''}"`,
-      `"${r.culturalInterest}"`,
-      `"${r.culturalDetails || ''}"`,
-      r.amount,
-      `"${r.paymentStatus}"`,
-      r.checkedIn ? "Yes" : "No",
-      `"${r.createdAt}"`,
-    ]);
+    const rows = filteredRegistrations.map((r) => {
+      const hasPass = Boolean(
+        r.hasPass || r.passStatus === "active" || r.paymentStatus === "completed"
+      );
+      return [
+        `"${r.regNumber}"`,
+        `"${r.fullName}"`,
+        `"${r.email}"`,
+        `"${r.phone}"`,
+        `"${r.degree}"`,
+        `"${r.branch}"`,
+        `"${r.passingYear || ''}"`,
+        `"${r.era || ''}"`,
+        `"${r.currentDesignation || ''}"`,
+        `"${r.organization || ''}"`,
+        hasPass ? "Yes (₹1,000 Paid)" : "No (Free Registered)",
+        `"${r.passStatus || (hasPass ? 'active' : 'none')}"`,
+        `"${r.performerStatus || 'none'}"`,
+        `"${r.performanceApplication?.title || ''}"`,
+        r.checkedIn ? "Yes" : "No",
+        `"${r.createdAt}"`,
+      ];
+    });
 
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -155,7 +166,7 @@ export default function RegistrationsTable({
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `SBSSU_Registrations_${typeFilter}_${new Date().toISOString().slice(0, 10)}.csv`
+      `SBSSU_Alumni_Directory_${tabFilter}_${new Date().toISOString().slice(0, 10)}.csv`
     );
     document.body.appendChild(link);
     link.click();
@@ -171,7 +182,7 @@ export default function RegistrationsTable({
             {title}
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500">
-            Manage registrations for Alumni (₹1,000) and Students (Free) for Sanjh 2026.
+            University alumni database records (Free) and Sanjh 2026 Event Passes (₹1,000).
           </p>
         </div>
 
@@ -196,69 +207,90 @@ export default function RegistrationsTable({
         </div>
       </div>
 
-      {/* FILTER TABS: All, Alumni, Students */}
-      <div className="flex items-center gap-2 p-1.5 bg-zinc-200/60 rounded-2xl w-full sm:w-fit">
+      {/* FILTER TABS: All, Pass Holders, Free Registered, Performers */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-zinc-200/60 rounded-2xl w-full sm:w-fit">
         <button
-          onClick={() => setTypeFilter("all")}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-            typeFilter === "all"
+          onClick={() => setTabFilter("all")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            tabFilter === "all"
               ? "bg-white text-zinc-900 shadow-xs"
               : "text-zinc-600 hover:text-zinc-900"
           }`}
         >
           <Users className="w-3.5 h-3.5" />
-          <span>All Registrations</span>
+          <span>All Registered Alumni</span>
           <span className="text-[10px] bg-zinc-100 text-zinc-600 px-1.5 py-0.2 rounded-full font-mono">
-            {registrations.length}
+            {counts.total}
           </span>
         </button>
 
         <button
-          onClick={() => setTypeFilter("alumni")}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-            typeFilter === "alumni"
+          onClick={() => setTabFilter("pass")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            tabFilter === "pass"
               ? "bg-orange-600 text-white shadow-xs"
               : "text-orange-800 hover:text-orange-950 hover:bg-orange-100/50"
           }`}
         >
-          <GraduationCap className="w-3.5 h-3.5" />
-          <span>Alumni (₹1,000)</span>
+          <Ticket className="w-3.5 h-3.5" />
+          <span>Pass Active (₹1,000)</span>
           <span
             className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              typeFilter === "alumni"
+              tabFilter === "pass"
                 ? "bg-white/20 text-white"
                 : "bg-orange-100 text-orange-900"
             }`}
           >
-            {alumniCount}
+            {counts.passCount}
           </span>
         </button>
 
         <button
-          onClick={() => setTypeFilter("student")}
-          className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-            typeFilter === "student"
-              ? "bg-emerald-600 text-white shadow-xs"
-              : "text-emerald-800 hover:text-emerald-950 hover:bg-emerald-100/50"
+          onClick={() => setTabFilter("free")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            tabFilter === "free"
+              ? "bg-zinc-800 text-white shadow-xs"
+              : "text-zinc-600 hover:text-zinc-900"
           }`}
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Students (Free)</span>
+          <GraduationCap className="w-3.5 h-3.5" />
+          <span>Registered Only (No Pass)</span>
           <span
             className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
-              typeFilter === "student"
+              tabFilter === "free"
                 ? "bg-white/20 text-white"
-                : "bg-emerald-100 text-emerald-900"
+                : "bg-zinc-200 text-zinc-700"
             }`}
           >
-            {studentCount}
+            {counts.freeCount}
+          </span>
+        </button>
+
+        <button
+          onClick={() => setTabFilter("performers")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+            tabFilter === "performers"
+              ? "bg-amber-600 text-white shadow-xs"
+              : "text-amber-800 hover:text-amber-950 hover:bg-amber-100/50"
+          }`}
+        >
+          <Music className="w-3.5 h-3.5" />
+          <span>Stage Performers</span>
+          <span
+            className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+              tabFilter === "performers"
+                ? "bg-white/20 text-white"
+                : "bg-amber-100 text-amber-900"
+            }`}
+          >
+            {counts.performerCount}
           </span>
         </button>
       </div>
 
       {/* Sub-Filters Card */}
       <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-2xs space-y-3">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Search */}
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
@@ -266,49 +298,35 @@ export default function RegistrationsTable({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email, roll number, organization..."
+              placeholder="Search by name, email, roll number, organization, designation..."
               className="w-full pl-9 pr-3 py-2 rounded-xl border border-zinc-200 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          {/* Payment Filter */}
+          {/* Gate Check-in Filter */}
           <div>
             <select
-              value={paymentFilter}
-              onChange={(e) => setPaymentFilter(e.target.value as any)}
+              value={checkInFilter}
+              onChange={(e) => setCheckInFilter(e.target.value as any)}
               className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
-              <option value="all">All Payment Statuses</option>
-              <option value="completed">Confirmed / Paid (or Student Free)</option>
-              <option value="pending">Pending Payment</option>
-            </select>
-          </div>
-
-          {/* Cultural Filter */}
-          <div>
-            <select
-              value={culturalFilter}
-              onChange={(e) => setCulturalFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
-            >
-              <option value="all">All Participation Types</option>
-              <option value="performer">Performers Only (Cert. Eligible)</option>
-              <option value="audience">Audience / Non-Performer</option>
+              <option value="all">All Gate Check-In Statuses</option>
+              <option value="checkedIn">Checked-In at Gate</option>
+              <option value="notCheckedIn">Not Yet Checked-In</option>
             </select>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-[11px] text-zinc-500 pt-1">
           <span>
-            Displaying <strong>{filteredRegistrations.length}</strong> {typeFilter} records
+            Displaying <strong>{filteredRegistrations.length}</strong> records
           </span>
-          {(search || paymentFilter !== "all" || culturalFilter !== "all" || typeFilter !== "all") && (
+          {(search || tabFilter !== "all" || checkInFilter !== "all") && (
             <button
               onClick={() => {
                 setSearch("");
-                setTypeFilter("all");
-                setPaymentFilter("all");
-                setCulturalFilter("all");
+                setTabFilter("all");
+                setCheckInFilter("all");
               }}
               className="text-orange-600 hover:underline font-semibold"
             >
@@ -318,7 +336,7 @@ export default function RegistrationsTable({
         </div>
       </div>
 
-      {/* Table */}
+      {/* Registrations Table */}
       <div className="bg-white rounded-3xl border border-zinc-200 shadow-2xs overflow-hidden">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-2">
@@ -328,9 +346,9 @@ export default function RegistrationsTable({
         ) : filteredRegistrations.length === 0 ? (
           <div className="py-20 text-center space-y-2">
             <Users className="w-10 h-10 text-zinc-300 mx-auto" />
-            <h3 className="font-bold text-zinc-700 text-sm">No registrations match criteria</h3>
+            <h3 className="font-bold text-zinc-700 text-sm">No records match filter criteria</h3>
             <p className="text-xs text-zinc-400">
-              Try changing the filter from &ldquo;{typeFilter}&rdquo; or clear the search input.
+              Try resetting the tab filter or search query.
             </p>
           </div>
         ) : (
@@ -338,21 +356,25 @@ export default function RegistrationsTable({
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 font-semibold uppercase tracking-wider text-[10px]">
-                  <th className="py-3 px-4">Pass ID</th>
-                  <th className="py-3 px-4">Category</th>
-                  <th className="py-3 px-4">Applicant Name</th>
+                  <th className="py-3 px-4">Alumni Reg ID</th>
+                  <th className="py-3 px-4">Alumnus Name</th>
                   <th className="py-3 px-4">Contact Details</th>
-                  <th className="py-3 px-4">Academic & Branch</th>
-                  <th className="py-3 px-4">Work / Hostel</th>
-                  <th className="py-3 px-4">SECA Cultural Act</th>
-                  <th className="py-3 px-4">Fee</th>
-                  <th className="py-3 px-4">Pass Status</th>
+                  <th className="py-3 px-4">Academic & Batch</th>
+                  <th className="py-3 px-4">Professional Profile</th>
+                  <th className="py-3 px-4">Event Pass (₹1,000)</th>
+                  <th className="py-3 px-4">Stage Performer</th>
+                  <th className="py-3 px-4">Venue Check-In</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100">
                 {filteredRegistrations.map((reg) => {
-                  const isStu = reg.registrantType === "student";
+                  const hasPass = Boolean(
+                    reg.hasPass || reg.passStatus === "active" || reg.paymentStatus === "completed"
+                  );
+                  const isPerformer = reg.performerStatus && reg.performerStatus !== "none";
+                  const perfStatus = reg.performerStatus || "none";
+
                   return (
                     <tr
                       key={reg.id}
@@ -365,20 +387,6 @@ export default function RegistrationsTable({
                         >
                           {reg.regNumber}
                         </Link>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {isStu ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                            <BookOpen className="w-3 h-3 text-emerald-700" />
-                            Student
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-800 border border-orange-200">
-                            <GraduationCap className="w-3 h-3 text-orange-700" />
-                            Alumni
-                          </span>
-                        )}
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -400,59 +408,60 @@ export default function RegistrationsTable({
                           {reg.degree} – {reg.branch}
                         </div>
                         <span className="inline-block text-[10px] text-zinc-500">
-                          {isStu
-                            ? reg.currentSemester || "Current Student"
-                            : `Batch of ${reg.passingYear} (${reg.era})`}
+                          Batch of {reg.passingYear} ({reg.era})
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 text-zinc-600 max-w-[140px] truncate">
-                        {isStu ? (
-                          <span className="text-xs text-zinc-600">{reg.hostelOrDayScholar || "Day Scholar"}</span>
-                        ) : (
-                          <>
-                            <div className="truncate font-medium">{reg.currentDesignation || "—"}</div>
-                            <div className="text-[10px] text-zinc-400 truncate">{reg.organization || "—"}</div>
-                          </>
-                        )}
+                      <td className="py-3.5 px-4 text-zinc-600 max-w-[150px] truncate">
+                        <div className="truncate font-medium">{reg.currentDesignation || "—"}</div>
+                        <div className="text-[10px] text-zinc-400 truncate">{reg.organization || "—"}</div>
                       </td>
 
                       <td className="py-3.5 px-4">
-                        {reg.culturalInterest && reg.culturalInterest !== "none" ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px]">
-                            <Music className="w-3 h-3 text-amber-700" />
-                            {reg.culturalInterest}
+                        {hasPass ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            <Ticket className="w-3 h-3 text-emerald-700" />
+                            Pass Active (₹1,000)
                           </span>
                         ) : (
-                          <span className="text-zinc-400 text-[11px]">Audience</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 font-bold">
-                        {isStu ? (
-                          <span className="text-emerald-700">₹0 (Free)</span>
-                        ) : (
-                          <span className="text-orange-700">₹{reg.amount}</span>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200">
+                            No Pass (Registered Only)
+                          </span>
                         )}
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                            reg.paymentStatus === "completed" || reg.paymentStatus === "free"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          {reg.paymentStatus === "completed" || reg.paymentStatus === "free"
-                            ? "✓ Active Pass"
-                            : "⏳ Pending"}
-                        </span>
-                        {reg.checkedIn && (
-                          <div className="text-[10px] text-emerald-700 font-semibold mt-1 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                            <span>Checked-In {reg.verifiedBy ? `(${reg.verifiedBy.split("@")[0]})` : ""}</span>
+                        {perfStatus === "approved" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
+                            <Sparkles className="w-3 h-3 text-emerald-700" />
+                            ★ Approved Performer
+                          </span>
+                        ) : perfStatus === "pending" ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 font-bold text-[10px] border border-amber-300">
+                            <Clock className="w-3 h-3 text-amber-700" />
+                            Pending Review
+                          </span>
+                        ) : perfStatus === "rejected" ? (
+                          <span className="text-zinc-400 text-[10px]">
+                            Rejected (Attendee)
+                          </span>
+                        ) : (
+                          <span className="text-zinc-400 text-[10px]">
+                            Attendee
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        {reg.checkedIn ? (
+                          <div className="text-[10px] text-emerald-700 font-semibold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                            <span>Checked-In</span>
                           </div>
+                        ) : (
+                          <span className="text-zinc-400 text-[10px]">
+                            Not at venue
+                          </span>
                         )}
                       </td>
 

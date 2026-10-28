@@ -39,6 +39,8 @@ import {
   LogOut,
   User,
   Briefcase,
+  Ticket,
+  ExternalLink,
 } from "lucide-react";
 
 // Dynamically import BarcodeScanner so it only loads on the client
@@ -462,7 +464,7 @@ export default function VerifyClient() {
               Manual Code Lookup
             </h2>
             <p className="text-xs text-zinc-500">
-              Enter Pass Number (e.g. SBSSU-ALM-2026-1234 or SBSSU-STU-2026-5678) or Student Roll Number.
+              Enter Alumni Pass Number (e.g. SBSSU-ALM-2026-1234) or Roll Number.
             </p>
           </div>
 
@@ -522,7 +524,7 @@ export default function VerifyClient() {
               </div>
               <div>
                 <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                  Verified Valid Entry
+                  Verified Alumni Record
                 </span>
                 <h2 className="text-2xl font-black text-zinc-900 mt-1">
                   {candidate.fullName}
@@ -534,15 +536,15 @@ export default function VerifyClient() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {candidate.registrantType === "student" ? (
-                <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200 flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
-                  Student Delegate (Free)
+              {Boolean(candidate.hasPass || candidate.passStatus === "active" || candidate.paymentStatus === "completed") ? (
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 flex items-center gap-1.5">
+                  <Ticket className="w-3.5 h-3.5 text-emerald-700" />
+                  Pass Active (₹1,000 Paid)
                 </span>
               ) : (
-                <span className="px-3 py-1.5 rounded-xl bg-orange-100 text-orange-800 font-bold text-xs border border-orange-200 flex items-center gap-1.5">
-                  <GraduationCap className="w-3.5 h-3.5 text-orange-700" />
-                  Alumni Pass (₹1,000 Paid)
+                <span className="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-700" />
+                  No Pass (Registered Only)
                 </span>
               )}
 
@@ -556,13 +558,58 @@ export default function VerifyClient() {
             </div>
           </div>
 
+          {/* Pass Status Warning if No Pass */}
+          {!Boolean(candidate.hasPass || candidate.passStatus === "active" || candidate.paymentStatus === "completed") && (
+            <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="font-extrabold text-sm text-rose-900 block">
+                  ENTRY PASS REQUIRED: No Active Meet Pass Found
+                </span>
+                <p className="text-zinc-700">
+                  This alumnus has registered their details in the university directory (Free), but has <strong>NOT</strong> purchased the Sanjh 2026 Event Pass (₹1,000). Gate admission and dinner coupons require an active pass.
+                </p>
+                <Link
+                  href={`/payment/${candidate.id}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 font-bold text-orange-700 hover:underline pt-1"
+                >
+                  Complete ₹1,000 Payment via Razorpay <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Approved Performer Callout */}
+          {candidate.performerStatus === "approved" && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md flex items-start gap-3">
+              <Sparkles className="w-6 h-6 text-amber-300 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-black/20 px-2 py-0.5 rounded-full inline-block">
+                  ★ APPROVED STAGE PERFORMER
+                </span>
+                <h3 className="text-base font-black">
+                  Act: {candidate.performanceApplication?.title || candidate.culturalDetails || "Cultural Performance"}
+                </h3>
+                <p className="text-xs text-emerald-100">
+                  Category: <strong>{candidate.performanceApplication?.category || candidate.culturalInterest || "Stage Act"}</strong> • Report to Stage Coordinator at 4:30 PM.
+                </p>
+                {candidate.performanceApplication?.adminRemarks && (
+                  <p className="text-xs bg-black/15 p-2 rounded-lg italic mt-1">
+                    Coordinator Notes: &ldquo;{candidate.performanceApplication.adminRemarks}&rdquo;
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Candidate Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             {/* Academic Information */}
             <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-2">
               <span className="font-bold text-zinc-900 flex items-center gap-1.5">
                 <GraduationCap className="w-4 h-4 text-orange-600" />
-                Academic Credentials
+                Alumni Academic Credentials
               </span>
               <div className="space-y-1.5 text-zinc-600">
                 <div className="flex justify-between">
@@ -571,80 +618,53 @@ export default function VerifyClient() {
                     {candidate.degree} – {candidate.branch}
                   </span>
                 </div>
-                {candidate.registrantType === "student" ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">Current Semester:</span>
-                      <span className="font-bold text-emerald-800">
-                        {candidate.currentSemester || "Enrolled Student"}
-                      </span>
-                    </div>
-                    {candidate.rollNumber && (
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">University Roll No:</span>
-                        <span className="font-mono font-bold text-zinc-800">
-                          {candidate.rollNumber}
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">Campus Residence:</span>
-                      <span className="text-zinc-700">
-                        {candidate.hostelOrDayScholar || "Day Scholar"}
-                      </span>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">Passing Batch:</span>
-                      <span className="font-bold text-orange-800">
-                        Class of {candidate.passingYear}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-zinc-400">Alma Mater Era:</span>
-                      <span className="font-semibold text-zinc-700">
-                        {candidate.era} Era
-                      </span>
-                    </div>
-                    {candidate.currentDesignation && (
-                      <div className="flex justify-between">
-                        <span className="text-zinc-400">Role / Company:</span>
-                        <span className="text-zinc-800 text-right">
-                          {candidate.currentDesignation} {candidate.organization ? `@ ${candidate.organization}` : ""}
-                        </span>
-                      </div>
-                    )}
-                  </>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Passing Batch:</span>
+                  <span className="font-bold text-orange-800">
+                    Class of {candidate.passingYear}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-400">Alma Mater Era:</span>
+                  <span className="font-semibold text-zinc-700">
+                    {candidate.era} Era
+                  </span>
+                </div>
+                {candidate.rollNumber && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Roll Number:</span>
+                    <span className="font-mono text-zinc-800">{candidate.rollNumber}</span>
+                  </div>
+                )}
+                {candidate.currentDesignation && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Role / Company:</span>
+                    <span className="text-zinc-800 text-right">
+                      {candidate.currentDesignation} {candidate.organization ? `@ ${candidate.organization}` : ""}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
 
-            {/* SECA Cultural Function Details */}
+            {/* Event & Logistics Track */}
             <div className="p-4 rounded-2xl bg-orange-50/50 border border-orange-200 space-y-2">
               <span className="font-bold text-orange-950 flex items-center gap-1.5">
                 <Music className="w-4 h-4 text-orange-600" />
-                Sanjh 2026 Cultural Track
+                Sanjh 2026 Participation Track
               </span>
               <div className="space-y-1.5 text-xs text-zinc-600">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">Cultural Participation:</span>
+                  <span className="text-zinc-500">Role:</span>
                   <span className="font-bold capitalize text-orange-800">
-                    {candidate.culturalInterest !== "none"
-                      ? candidate.culturalInterest
-                      : "Audience / Delegate"}
+                    {candidate.performerStatus === "approved"
+                      ? "Approved Stage Performer"
+                      : candidate.performerStatus === "pending"
+                      ? "Performer (Pending Review)"
+                      : "Honored Attendee"}
                   </span>
                 </div>
-                {candidate.culturalDetails && (
-                  <div>
-                    <span className="text-zinc-500 block text-[11px]">Act Details:</span>
-                    <span className="text-zinc-800 font-medium italic">
-                      {candidate.culturalDetails}
-                    </span>
-                  </div>
-                )}
-                {candidate.guestCount > 0 && (
+                {Boolean(candidate.guestCount && candidate.guestCount > 0) && (
                   <div className="flex justify-between">
                     <span className="text-zinc-500">Accompanying Guests:</span>
                     <span className="font-semibold text-zinc-800">
@@ -653,29 +673,20 @@ export default function VerifyClient() {
                   </div>
                 )}
                 <div className="flex justify-between">
+                  <span className="text-zinc-500">Dinner Preference:</span>
+                  <span className="capitalize font-medium text-zinc-800">
+                    {candidate.dietaryPreference || "Veg"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
                   <span className="text-zinc-500">Attendance:</span>
                   <span className="capitalize font-medium text-zinc-800">
-                    {candidate.attendanceType}
+                    {candidate.attendanceType || "In-Person"}
                   </span>
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Certificate Guarantee Banner */}
-          {candidate.culturalInterest !== "none" && (
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-xs text-emerald-950 flex items-center gap-2.5">
-              <Award className="w-5 h-5 text-emerald-700 shrink-0" />
-              <div>
-                <span className="font-bold block">
-                  📜 Verified SECA Performer • Participation Certificate Eligible
-                </span>
-                <span className="text-emerald-800 text-[11px]">
-                  Candidate is registered for {candidate.culturalInterest.toUpperCase()}. Official participation certificate is awarded upon performance.
-                </span>
-              </div>
-            </div>
-          )}
 
           {/* Barcode representation */}
           <div className="p-3 rounded-2xl bg-white border border-zinc-200 flex flex-col items-center justify-center">

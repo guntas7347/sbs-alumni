@@ -380,7 +380,7 @@ export default function PaymentClient({
                   </span>
                 </div>
               )}
-              {registration.guestCount > 0 && (
+              {Boolean(registration.guestCount && registration.guestCount > 0) && (
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Accompanying Guests:</span>
                   <span className="font-medium text-zinc-800">

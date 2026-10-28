@@ -79,7 +79,7 @@ export async function createRazorpayOrderAction(registrationId: string): Promise
         fullName: reg.fullName,
         email: reg.email,
         phone: reg.phone,
-        type: reg.registrantType || "alumni",
+        type: "alumni",
       },
     });
 

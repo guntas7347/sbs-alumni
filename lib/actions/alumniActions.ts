@@ -1,8 +1,17 @@
 "use server";
 
 import { db } from "@/lib/firebase/firebase";
-import type { AlumniRegistration, AlumniRegistrationInput } from "@/lib/types";
+import type {
+  AlumniRegistration,
+  AlumniRegistrationInput,
+  PerformanceApplication,
+} from "@/lib/types";
 
+/**
+ * Creates an Alumni Registration in the University Database.
+ * Registration is 100% Free (₹0) — used for academic & alumni record keeping.
+ * An Event Pass for Sanjh 2026 can be purchased separately for ₹1,000.
+ */
 export async function createAlumniRegistration(
   input: AlumniRegistrationInput,
 ): Promise<{
@@ -14,39 +23,33 @@ export async function createAlumniRegistration(
 }> {
   try {
     if (!input.email || !input.fullName) {
-      return { success: false, error: "Name and email are required" };
+      return { success: false, error: "Full Name and Google Email are required." };
     }
 
     const currentYear = new Date().getFullYear();
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const prefix =
-      input.registrantType === "student" ? "SBSSU-STU" : "SBSSU-ALM";
-    const regNumber = `${prefix}-${currentYear}-${randomSuffix}`;
-
+    const regNumber = `SBSSU-ALM-${currentYear}-${randomSuffix}`;
     const now = new Date().toISOString();
-    const isStudent = input.registrantType === "student";
 
     const registrationData: Omit<AlumniRegistration, "id"> = {
       ...input,
-      registrantType: input.registrantType || "alumni",
       email: input.email.trim().toLowerCase(),
       fullName: input.fullName.trim(),
       regNumber,
-      amount: isStudent ? 0 : 1000,
-      paymentStatus: isStudent ? "completed" : "pending",
-      paymentDetails: isStudent
-        ? {
-            transactionId: `STU-FREE-${randomSuffix}`,
-            paymentMethod: "Student Complimentary Pass (₹0)",
-            paidAt: now,
-          }
-        : null,
+      // Registration is Free
+      amount: 0,
+      paymentStatus: "free",
+      // Pass is separate - initially not acquired
+      hasPass: false,
+      passStatus: "none",
+      passPrice: 1000,
+      paymentDetails: null,
       checkedIn: false,
+      // Stage performance default: attendee only
+      performerStatus: "none",
       createdAt: now,
       updatedAt: now,
     };
-
-    console.log(registrationData);
 
     const docRef = await db
       .collection("alumni_registrations")
@@ -56,13 +59,13 @@ export async function createAlumniRegistration(
       success: true,
       id: docRef.id,
       regNumber,
-      isFree: isStudent,
+      isFree: true,
     };
   } catch (error: any) {
-    console.error("Error creating registration:", error);
+    console.error("Error creating alumni registration:", error);
     return {
       success: false,
-      error: error?.message || "Failed to create registration",
+      error: error?.message || "Failed to create alumni registration",
     };
   }
 }
@@ -76,7 +79,7 @@ export async function getAlumniRegistrationById(
     const docSnap = await db.collection("alumni_registrations").doc(id).get();
 
     if (!docSnap.exists) {
-      return { success: false, error: "Registration not found" };
+      return { success: false, error: "Alumni record not found" };
     }
 
     const data = docSnap.data();
@@ -84,8 +87,10 @@ export async function getAlumniRegistrationById(
       success: true,
       data: {
         id: docSnap.id,
-        registrantType:
-          data?.registrantType || (data?.era ? "alumni" : "student"),
+        hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
+        passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+        passPrice: data?.passPrice || 1000,
+        performerStatus: data?.performerStatus || "none",
         ...data,
       } as AlumniRegistration,
     };
@@ -105,7 +110,7 @@ export async function verifyRegistrationCode(
     if (!rawInput || !rawInput.trim()) {
       return {
         success: false,
-        error: "Please enter or scan a barcode/registration code.",
+        error: "Please enter or scan a barcode or registration code.",
       };
     }
 
@@ -123,7 +128,7 @@ export async function verifyRegistrationCode(
       if (match) code = decodeURIComponent(match[1]);
     }
 
-    // 1. Try direct Firestore document ID lookup
+    // 1. Direct Firestore document ID lookup
     try {
       const docSnap = await db
         .collection("alumni_registrations")
@@ -135,17 +140,19 @@ export async function verifyRegistrationCode(
           success: true,
           data: {
             id: docSnap.id,
-            registrantType:
-              data?.registrantType || (data?.era ? "alumni" : "student"),
+            hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
+            passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+            passPrice: data?.passPrice || 1000,
+            performerStatus: data?.performerStatus || "none",
             ...data,
           } as AlumniRegistration,
         };
       }
     } catch {
-      // document ID lookup could fail if contains invalid characters, ignore and try query
+      // ignore doc lookup failure
     }
 
-    // 2. Try regNumber lookup (case-insensitive search)
+    // 2. Try regNumber lookup
     const upperCode = code.toUpperCase();
     const querySnapshot = await db
       .collection("alumni_registrations")
@@ -160,14 +167,16 @@ export async function verifyRegistrationCode(
         success: true,
         data: {
           id: docSnap.id,
-          registrantType:
-            data?.registrantType || (data?.era ? "alumni" : "student"),
+          hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
+          passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+          passPrice: data?.passPrice || 1000,
+          performerStatus: data?.performerStatus || "none",
           ...data,
         } as AlumniRegistration,
       };
     }
 
-    // 3. Try student roll number lookup
+    // 3. Try rollNumber lookup
     const rollSnapshot = await db
       .collection("alumni_registrations")
       .where("rollNumber", "==", code)
@@ -181,8 +190,10 @@ export async function verifyRegistrationCode(
         success: true,
         data: {
           id: docSnap.id,
-          registrantType:
-            data?.registrantType || (data?.era ? "alumni" : "student"),
+          hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
+          passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+          passPrice: data?.passPrice || 1000,
+          performerStatus: data?.performerStatus || "none",
           ...data,
         } as AlumniRegistration,
       };
@@ -190,7 +201,7 @@ export async function verifyRegistrationCode(
 
     return {
       success: false,
-      error: `No candidate found matching barcode/code "${code}". Please check the registration number.`,
+      error: `No alumni record found matching barcode/code "${code}". Please check the registration number.`,
     };
   } catch (error: any) {
     console.error("Error verifying registration code:", error);
@@ -198,23 +209,46 @@ export async function verifyRegistrationCode(
   }
 }
 
+/**
+ * Gate Check-In: Requires candidate to have an ACTIVE EVENT PASS (₹1,000 paid)
+ */
 export async function markCheckInAtGate(
   id: string,
   verifiedByEmail?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
+
+    const docRef = db.collection("alumni_registrations").doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Alumni record not found." };
+    }
+
+    const data = docSnap.data();
+    const hasActivePass = Boolean(
+      data?.hasPass === true ||
+      data?.passStatus === "active" ||
+      data?.paymentStatus === "completed"
+    );
+
+    if (!hasActivePass) {
+      return {
+        success: false,
+        error:
+          "Candidate does NOT have an active Alumni Meet Pass (₹1,000). Only pass holders are permitted entry to the venue.",
+      };
+    }
+
     const now = new Date().toISOString();
-    await db
-      .collection("alumni_registrations")
-      .doc(id)
-      .update({
-        checkedIn: true,
-        checkedInAt: now,
-        verifiedBy: verifiedByEmail?.trim().toLowerCase() || "faculty",
-        verifiedAt: now,
-        updatedAt: now,
-      });
+    await docRef.update({
+      checkedIn: true,
+      checkedInAt: now,
+      verifiedBy: verifiedByEmail?.trim().toLowerCase() || "faculty",
+      verifiedAt: now,
+      updatedAt: now,
+    });
+
     return { success: true };
   } catch (error: any) {
     console.error("Error checking in attendee at gate:", error);
@@ -250,8 +284,10 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
       success: true,
       data: {
         id: docSnap.id,
-        registrantType:
-          data?.registrantType || (data?.era ? "alumni" : "student"),
+        hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
+        passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+        passPrice: data?.passPrice || 1000,
+        performerStatus: data?.performerStatus || "none",
         ...data,
       } as AlumniRegistration,
     };
@@ -264,6 +300,9 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
   }
 }
 
+/**
+ * Updates payment status and issues the official Alumni Meet Event Pass (₹1,000)
+ */
 export async function updateAlumniPayment(
   id: string,
   paymentDetails: {
@@ -280,6 +319,11 @@ export async function updateAlumniPayment(
       .collection("alumni_registrations")
       .doc(id)
       .update({
+        hasPass: true,
+        passStatus: "active",
+        passPrice: 1000,
+        passIssuedAt: now,
+        amount: 1000,
         paymentStatus: "completed",
         paymentDetails: {
           ...paymentDetails,
@@ -290,10 +334,96 @@ export async function updateAlumniPayment(
 
     return { success: true };
   } catch (error: any) {
-    console.error("Error updating payment:", error);
+    console.error("Error updating payment and issuing pass:", error);
     return {
       success: false,
-      error: error?.message || "Failed to update payment",
+      error: error?.message || "Failed to issue pass",
+    };
+  }
+}
+
+/**
+ * Submit an application to perform on stage at Sanjh 2026.
+ * Requirement: Candidate must have an active Alumni Meet Pass (₹1,000 paid).
+ */
+export async function submitPerformanceApplication(
+  registrationId: string,
+  application: {
+    category: string;
+    title: string;
+    description: string;
+    resumeUrl: string;
+    durationMinutes?: string;
+    specialRequirements?: string;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!registrationId) {
+      return { success: false, error: "Registration ID is required." };
+    }
+
+    if (!application.category || !application.title || !application.description) {
+      return {
+        success: false,
+        error: "Performance Category, Act Title, and Description are required.",
+      };
+    }
+
+    if (!application.resumeUrl || !application.resumeUrl.trim()) {
+      return {
+        success: false,
+        error: "A valid Resume, Portfolio, or Performance Video URL is required.",
+      };
+    }
+
+    const docRef = db.collection("alumni_registrations").doc(registrationId);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Alumni registration record not found." };
+    }
+
+    const reg = docSnap.data();
+    const hasActivePass = Boolean(
+      reg?.hasPass === true ||
+      reg?.passStatus === "active" ||
+      reg?.paymentStatus === "completed"
+    );
+
+    if (!hasActivePass) {
+      return {
+        success: false,
+        error:
+          "An active Alumni Meet Pass (₹1,000) is required to apply for stage performance. Please purchase your pass first.",
+      };
+    }
+
+    const now = new Date().toISOString();
+    const performanceData: PerformanceApplication = {
+      applied: true,
+      category: application.category.trim(),
+      title: application.title.trim(),
+      description: application.description.trim(),
+      resumeUrl: application.resumeUrl.trim(),
+      durationMinutes: application.durationMinutes?.trim() || "5-7 minutes",
+      specialRequirements: application.specialRequirements?.trim() || "Standard stage mic & sound",
+      status: "pending",
+      appliedAt: now,
+    };
+
+    await docRef.update({
+      performerStatus: "pending",
+      performanceApplication: performanceData,
+      culturalInterest: application.category.trim(),
+      culturalDetails: `${application.title.trim()}: ${application.description.trim()}`,
+      updatedAt: now,
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error submitting performance application:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to submit performance application",
     };
   }
 }
@@ -314,8 +444,10 @@ export async function getAllRegistrations(): Promise<{
       const data = doc.data();
       registrations.push({
         id: doc.id,
-        registrantType:
-          data?.registrantType || (data?.era ? "alumni" : "student"),
+        hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
+        passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+        passPrice: data?.passPrice || 1000,
+        performerStatus: data?.performerStatus || "none",
         ...data,
       } as AlumniRegistration);
     });
@@ -331,46 +463,48 @@ export async function getAllRegistrations(): Promise<{
 }
 
 export async function getRegistrationStats(): Promise<{
-  total: number;
-  paid: number;
-  pending: number;
-  alumniCount: number;
-  studentCount: number;
+  totalRegistered: number;
+  passHolders: number;
+  registeredOnly: number;
   totalRevenue: number;
-  culturalParticipants: number;
+  performersApplied: number;
+  performersApproved: number;
   inPersonAttendees: number;
 }> {
   try {
     const snapshot = await db.collection("alumni_registrations").get();
 
-    let total = 0;
-    let paid = 0;
-    let pending = 0;
-    let alumniCount = 0;
-    let studentCount = 0;
+    let totalRegistered = 0;
+    let passHolders = 0;
+    let registeredOnly = 0;
     let totalRevenue = 0;
-    let culturalParticipants = 0;
+    let performersApplied = 0;
+    let performersApproved = 0;
     let inPersonAttendees = 0;
 
     snapshot.forEach((doc) => {
       const data = doc.data();
-      total += 1;
-      const type = data?.registrantType || (data?.era ? "alumni" : "student");
-      if (type === "student") {
-        studentCount += 1;
+      totalRegistered += 1;
+
+      const hasPass = Boolean(
+        data?.hasPass === true ||
+        data?.passStatus === "active" ||
+        data?.paymentStatus === "completed"
+      );
+
+      if (hasPass) {
+        passHolders += 1;
+        totalRevenue += Number(data.amount || 1000);
       } else {
-        alumniCount += 1;
+        registeredOnly += 1;
       }
 
-      if (data.paymentStatus === "completed" || data.paymentStatus === "free") {
-        paid += 1;
-        totalRevenue += Number(data.amount || 0);
-      } else {
-        pending += 1;
+      if (data?.performerStatus === "pending" || data?.performerStatus === "approved" || data?.performanceApplication?.applied) {
+        performersApplied += 1;
       }
 
-      if (data.culturalInterest && data.culturalInterest !== "none") {
-        culturalParticipants += 1;
+      if (data?.performerStatus === "approved" || data?.performanceApplication?.status === "approved") {
+        performersApproved += 1;
       }
 
       if (data.attendanceType === "in-person") {
@@ -379,25 +513,23 @@ export async function getRegistrationStats(): Promise<{
     });
 
     return {
-      total,
-      paid,
-      pending,
-      alumniCount,
-      studentCount,
+      totalRegistered,
+      passHolders,
+      registeredOnly,
       totalRevenue,
-      culturalParticipants,
+      performersApplied,
+      performersApproved,
       inPersonAttendees,
     };
   } catch (error: any) {
     console.error("Error calculating stats:", error);
     return {
-      total: 0,
-      paid: 0,
-      pending: 0,
-      alumniCount: 0,
-      studentCount: 0,
+      totalRegistered: 0,
+      passHolders: 0,
+      registeredOnly: 0,
       totalRevenue: 0,
-      culturalParticipants: 0,
+      performersApplied: 0,
+      performersApproved: 0,
       inPersonAttendees: 0,
     };
   }
