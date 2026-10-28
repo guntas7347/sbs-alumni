@@ -1,0 +1,204 @@
+name: Deploy Alumni Website
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-production-deployment
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: [self-hosted, Windows, X64]
+
+    steps:
+      - name: Update source and build application
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $app = "C:\HostingSpaces\admin\alumni.sbssu.ac.in"
+
+          Set-Location $app
+
+          if (!(Test-Path "$app\.git")) {
+            throw "Git repository not found: $app"
+          }
+
+          git fetch origin main
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Git fetch failed"
+          }
+
+          $oldCommit = git rev-parse HEAD
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Unable to read current commit"
+          }
+
+          git reset --hard origin/main
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Git reset failed"
+          }
+
+          $newCommit = git rev-parse HEAD
+
+          $dependenciesChanged = $false
+
+          if ($oldCommit -ne $newCommit) {
+            $changedFiles = @(
+              git diff --name-only $oldCommit $newCommit -- package.json package-lock.json
+            )
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "Unable to check dependency changes"
+            }
+
+            if ($changedFiles.Count -gt 0) {
+              $dependenciesChanged = $true
+            }
+          }
+
+          if ($dependenciesChanged -or !(Test-Path "$app\node_modules")) {
+            npm ci
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "npm ci failed"
+            }
+          }
+
+          npm run build
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Next.js build failed"
+          }
+
+          Write-Host "Build completed successfully."
+
+      - name: Restart application on port 3050
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Set-Location "C:\HostingSpaces\admin\alumni.sbssu.ac.in"
+
+          pm2 restart alumni.sbssu.ac.in --update-env
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "PM2 restart failed"
+          }
+
+          # Wait for the website to respond.
+          $healthy = $false
+
+          for ($i = 1; $i -le 12; $i++) {
+            Start-Sleep -Seconds 5
+
+            try {
+              $response = Invoke-WebRequest `
+                -Uri "http://127.0.0.1:3050" `
+                -UseBasicParsing `
+                -TimeoutSec 5
+
+              if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500) {
+                $healthy = $true
+                break
+              }
+            }
+            catch {
+              Write-Host "Application not responding yet. Attempt $i of 12."
+            }
+          }
+
+          if (!$healthy) {
+            throw "Application did not respond successfully on port 3050."
+          }
+
+          pm2 save
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "Failed to save PM2 process list"
+          }
+
+          Write-Host "Deployment completed successfully."
+
+      - name: Send successful deployment notification
+        if: success()
+        shell: powershell
+        env:
+          NTFY_TOPIC: sbs-win19-QnybJFq0z9j6UeCl
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          if ([string]::IsNullOrWhiteSpace($env:NTFY_TOPIC)) {
+            throw "NTFY_TOPIC secret is not configured."
+          }
+
+          $message = @"
+          Alumni website deployment successful.
+          Branch: $env:BRANCH
+          Commit: $env:COMMIT_SHA
+          URL: https://alumni.sbssu.ac.in
+          Port: 3050
+          "@
+
+          Invoke-RestMethod `
+            -Method Post `
+            -Uri "https://ntfy.sh/$($env:NTFY_TOPIC)" `
+            -Headers @{
+              Title = "Alumni Deployment Successful"
+              Tags = "white_check_mark"
+              Priority = "default"
+            } `
+            -ContentType "text/plain; charset=utf-8" `
+            -Body $message
+
+          Write-Host "Success notification sent."
+
+      - name: Send deployment failure notification
+        if: failure()
+        shell: powershell
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          COMMIT_SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:NTFY_TOPIC)) {
+            Write-Host "NTFY_TOPIC secret is not configured."
+            exit 0
+          }
+
+          $message = @"
+          Alumni website deployment FAILED.
+          Branch: $env:BRANCH
+          Commit: $env:COMMIT_SHA
+          Check the GitHub Actions logs.
+          "@
+
+          try {
+            Invoke-RestMethod `
+              -Method Post `
+              -Uri "https://ntfy.sh/$($env:NTFY_TOPIC)" `
+              -Headers @{
+                Title = "Alumni Deployment Failed"
+                Tags = "warning"
+                Priority = "high"
+              } `
+              -ContentType "text/plain; charset=utf-8" `
+              -Body $message
+
+            Write-Host "Failure notification sent."
+          }
+          catch {
+            Write-Host "Unable to send failure notification: $_"
+          }
