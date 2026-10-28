@@ -18,13 +18,13 @@ jobs:
     runs-on: [self-hosted, Windows, X64]
 
     steps:
+      # 1. Fetch source, install dependencies when needed, and build
       - name: Update source and build application
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
 
           $app = "C:\HostingSpaces\admin\alumni.sbssu.ac.in"
-
           Set-Location $app
 
           if (!(Test-Path "$app\.git")) {
@@ -32,24 +32,21 @@ jobs:
           }
 
           git fetch origin main
-
           if ($LASTEXITCODE -ne 0) {
             throw "Git fetch failed"
           }
 
-          $oldCommit = git rev-parse HEAD
-
+          $oldCommit = (git rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0) {
             throw "Unable to read current commit"
           }
 
           git reset --hard origin/main
-
           if ($LASTEXITCODE -ne 0) {
             throw "Git reset failed"
           }
 
-          $newCommit = git rev-parse HEAD
+          $newCommit = (git rev-parse HEAD).Trim()
 
           $dependenciesChanged = $false
 
@@ -83,20 +80,27 @@ jobs:
 
           Write-Host "Build completed successfully."
 
-      - name: Restart application on port 3050
+      # 2. Restart PM2 and verify the website
+      - name: Restart application and health check
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
 
-          Set-Location "C:\HostingSpaces\admin\alumni.sbssu.ac.in"
+          $pm2 = "C:\Users\Administrator\AppData\Roaming\npm\pm2.cmd"
 
-          pm2 restart alumni.sbssu.ac.in --update-env
+          # Use Administrator's existing PM2 daemon and process list.
+          $env:PM2_HOME = "C:\Users\Administrator\.pm2"
 
-          if ($LASTEXITCODE -ne 0) {
-            throw "PM2 restart failed"
+          if (!(Test-Path $pm2)) {
+            throw "PM2 executable not found: $pm2"
           }
 
-          # Wait for the website to respond.
+          & $pm2 restart alumni.sbssu.ac.in --update-env
+
+          if ($LASTEXITCODE -ne 0) {
+            throw "PM2 restart failed. Check PM2_HOME and the runner service account."
+          }
+
           $healthy = $false
 
           for ($i = 1; $i -le 12; $i++) {
@@ -114,15 +118,15 @@ jobs:
               }
             }
             catch {
-              Write-Host "Application not responding yet. Attempt $i of 12."
+              Write-Host "Health check attempt $i of 12 failed."
             }
           }
 
           if (!$healthy) {
-            throw "Application did not respond successfully on port 3050."
+            throw "Application did not respond on port 3050 within 60 seconds."
           }
 
-          pm2 save
+          & $pm2 save
 
           if ($LASTEXITCODE -ne 0) {
             throw "Failed to save PM2 process list"
@@ -130,11 +134,12 @@ jobs:
 
           Write-Host "Deployment completed successfully."
 
+      # 3. Notify on success
       - name: Send successful deployment notification
         if: success()
         shell: powershell
         env:
-          NTFY_TOPIC: sbs-win19-QnybJFq0z9j6UeCl
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           COMMIT_SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
         run: |
@@ -165,24 +170,28 @@ jobs:
 
           Write-Host "Success notification sent."
 
+      # 4. Notify if ANY earlier step fails
       - name: Send deployment failure notification
-        if: failure()
+        if: ${{ failure() }}
         shell: powershell
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           COMMIT_SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
         run: |
+          $ErrorActionPreference = "Stop"
+
           if ([string]::IsNullOrWhiteSpace($env:NTFY_TOPIC)) {
-            Write-Host "NTFY_TOPIC secret is not configured."
-            exit 0
+            Write-Error "NTFY_TOPIC secret is not configured; cannot send notification."
+            exit 1
           }
 
           $message = @"
           Alumni website deployment FAILED.
           Branch: $env:BRANCH
           Commit: $env:COMMIT_SHA
-          Check the GitHub Actions logs.
+          Time: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+          Check the GitHub Actions logs for details.
           "@
 
           try {
@@ -190,7 +199,7 @@ jobs:
               -Method Post `
               -Uri "https://ntfy.sh/$($env:NTFY_TOPIC)" `
               -Headers @{
-                Title = "Alumni Deployment Failed"
+                Title = "Alumni Deployment FAILED"
                 Tags = "warning"
                 Priority = "high"
               } `
@@ -200,5 +209,6 @@ jobs:
             Write-Host "Failure notification sent."
           }
           catch {
-            Write-Host "Unable to send failure notification: $_"
+            Write-Error "Failed to send ntfy notification: $_"
+            exit 1
           }
