@@ -139,7 +139,7 @@ jobs:
         if: success()
         shell: powershell
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC: sbs-win19-QnybJFq0z9j6UeCl
           COMMIT_SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
         run: |
@@ -175,7 +175,7 @@ jobs:
         if: ${{ failure() }}
         shell: powershell
         env:
-          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          NTFY_TOPIC: sbs-win19-QnybJFq0z9j6UeCl
           COMMIT_SHA: ${{ github.sha }}
           BRANCH: ${{ github.ref_name }}
         run: |
