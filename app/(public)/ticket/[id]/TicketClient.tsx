@@ -31,6 +31,7 @@ import {
   GraduationCap,
   ArrowRight,
   Info,
+  Users,
 } from "lucide-react";
 
 export default function TicketClient({
@@ -369,6 +370,34 @@ export default function TicketClient({
               </div>
             </div>
           </div>
+
+          {/* Accompanying Family Members (Mom, Dad, Spouse, Child) */}
+          {registration.guests && registration.guests.length > 0 && (
+            <div className="p-4 rounded-2xl bg-orange-50/70 border border-orange-200 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-orange-950 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-orange-600" />
+                  Accompanying Family Guests ({registration.guests.length} / Max 3)
+                </span>
+                <span className="text-[10px] text-zinc-500 font-medium">Mom, Dad, Spouse, Child</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {registration.guests.map((g, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between bg-white border border-orange-200/80 rounded-xl px-3 py-2 text-xs shadow-2xs"
+                  >
+                    <span className="font-bold text-zinc-900 truncate mr-2">
+                      {idx + 1}. {g.name}
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 shrink-0 border border-orange-200">
+                      {g.relation}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Bottom Bar: Barcode (Only if Pass is Active) */}
           {hasPass ? (

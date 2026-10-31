@@ -8,13 +8,21 @@ import {
   type User,
 } from "firebase/auth";
 
+const isProd = process.env.NODE_ENV === "production";
+
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: "sbs-alumni.firebaseapp.com",
-  projectId: "sbs-alumni",
-  storageBucket: "sbs-alumni.firebasestorage.app",
-  messagingSenderId: "122407210140",
-  appId: "1:122407210140:web:052ae4af7f193e4c35b159",
+  authDomain: isProd
+    ? "alumni-sbssu.firebaseapp.com"
+    : "sbs-alumni.firebaseapp.com",
+  projectId: isProd ? "alumni-sbssu" : "sbs-alumni",
+  storageBucket: isProd
+    ? "alumni-sbssu.firebasestorage.app"
+    : "sbs-alumni.firebasestorage.app",
+  messagingSenderId: isProd ? "377345996671" : "122407210140",
+  appId: isProd
+    ? "1:377345996671:web:64e11141cb1c7265bb4c4a"
+    : "1:122407210140:web:052ae4af7f193e4c35b159",
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

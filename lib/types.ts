@@ -15,6 +15,13 @@ export interface PerformanceApplication {
   adminRemarks?: string;
 }
 
+export type AllowedGuestRelation = "Mom" | "Dad" | "Spouse" | "Child";
+
+export interface GuestDetail {
+  name: string;
+  relation: AllowedGuestRelation;
+}
+
 export interface AlumniRegistration {
   id: string;
   regNumber: string;
@@ -46,12 +53,24 @@ export interface AlumniRegistration {
   passIssuedAt?: string;
   amount: number; // 0 initially, 1000 when pass is paid
   paymentStatus: "free" | "pending" | "completed" | "failed";
+
+  // UPI QR Payment & Manual Verification
+  txnId?: string;
+  paymentMode?: "UPI_QR" | string;
+  verified?: boolean;
+  screenshotUrl?: string;
+  paymentScreenshotUrl?: string;
+
   paymentDetails?: {
     transactionId: string;
     paymentMethod: string;
     paidAt: string;
     referenceNumber?: string;
     orderId?: string;
+    screenshotUrl?: string;
+    verified?: boolean;
+    verifiedAt?: string;
+    verifiedBy?: string;
   } | null;
 
   // Gate Check-in
@@ -68,7 +87,9 @@ export interface AlumniRegistration {
 
   // Event Logistics
   attendanceType?: "in-person" | "virtual" | "supporting";
+  attendingMeet?: boolean;
   guestCount?: number;
+  guests?: GuestDetail[];
   dietaryPreference?: "veg" | "non-veg";
 
   adminNotes?: string;

@@ -1,5 +1,7 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default function RegisterRedirect() {
-  redirect("/sanjh-2026/register");
+import RegistrationForm from "@/components/RegistrationForm";
+
+export default function RegisterPage() {
+  return <RegistrationForm />;
 }

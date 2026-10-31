@@ -85,7 +85,7 @@ export async function createRazorpayOrderAction(registrationId: string): Promise
 
     // Save order reference on registration
     try {
-      await db.collection("alumni_registrations").doc(reg.id).update({
+      await db.collection("alumni_registrations_2026").doc(reg.id).update({
         "paymentDetails.orderId": order.id,
         updatedAt: new Date().toISOString(),
       });

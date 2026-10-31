@@ -1,11 +1,18 @@
 "use server";
 
 import { db } from "@/lib/firebase/firebase";
+import { sendMail } from "@/lib/emails/nodemailer";
+import {
+  getRegistrationEmailTemplate,
+  getPaymentSubmittedEmailTemplate,
+} from "@/lib/emails/templates";
 import type {
   AlumniRegistration,
   AlumniRegistrationInput,
   PerformanceApplication,
 } from "@/lib/types";
+
+const collectionName = "alumni_registrations_2026";
 
 /**
  * Creates an Alumni Registration in the University Database.
@@ -23,7 +30,10 @@ export async function createAlumniRegistration(
 }> {
   try {
     if (!input.email || !input.fullName) {
-      return { success: false, error: "Full Name and Google Email are required." };
+      return {
+        success: false,
+        error: "Full Name and Google Email are required.",
+      };
     }
 
     const currentYear = new Date().getFullYear();
@@ -31,11 +41,50 @@ export async function createAlumniRegistration(
     const regNumber = `SBSSU-ALM-${currentYear}-${randomSuffix}`;
     const now = new Date().toISOString();
 
+    // Determine whether user opted to attend the meet
+    const isAttending = input.attendingMeet !== false && input.attendanceType !== "supporting";
+
+    // Validate accompanying guests (max 3, only Mom, Dad, Spouse, Child)
+    let validatedGuests: { name: string; relation: "Mom" | "Dad" | "Spouse" | "Child" }[] = [];
+    if (isAttending && input.guests && input.guests.length > 0) {
+      if (input.guests.length > 3) {
+        return {
+          success: false,
+          error: "A maximum of 3 accompanying guests are allowed.",
+        };
+      }
+
+      const allowedRelations = new Set(["Mom", "Dad", "Spouse", "Child"]);
+      for (let i = 0; i < input.guests.length; i++) {
+        const g = input.guests[i];
+        if (!g.name || !g.name.trim()) {
+          return {
+            success: false,
+            error: `Name is required for Guest ${i + 1}.`,
+          };
+        }
+        if (!g.relation || !allowedRelations.has(g.relation)) {
+          return {
+            success: false,
+            error: `Guest ${i + 1} relation "${g.relation}" is not permitted. Only Mom, Dad, Spouse, or Child are allowed.`,
+          };
+        }
+        validatedGuests.push({
+          name: g.name.trim(),
+          relation: g.relation as "Mom" | "Dad" | "Spouse" | "Child",
+        });
+      }
+    }
+
     const registrationData: Omit<AlumniRegistration, "id"> = {
       ...input,
       email: input.email.trim().toLowerCase(),
       fullName: input.fullName.trim(),
       regNumber,
+      attendingMeet: isAttending,
+      // Accompanying guests
+      guestCount: validatedGuests.length,
+      guests: validatedGuests,
       // Registration is Free
       amount: 0,
       paymentStatus: "free",
@@ -51,9 +100,25 @@ export async function createAlumniRegistration(
       updatedAt: now,
     };
 
-    const docRef = await db
-      .collection("alumni_registrations")
-      .add(registrationData);
+    const docRef = await db.collection(collectionName).add(registrationData);
+
+    const fullRecord: AlumniRegistration = {
+      id: docRef.id,
+      ...registrationData,
+    };
+
+    // Send confirmation email to user upon creating registration
+    try {
+      const emailTemplate = getRegistrationEmailTemplate(fullRecord);
+      await sendMail({
+        to: fullRecord.email,
+        subject: emailTemplate.subject,
+        text: emailTemplate.text,
+        html: emailTemplate.html,
+      });
+    } catch (mailErr) {
+      console.error("Failed to send welcome registration email:", mailErr);
+    }
 
     return {
       success: true,
@@ -76,7 +141,7 @@ export async function getAlumniRegistrationById(
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
 
-    const docSnap = await db.collection("alumni_registrations").doc(id).get();
+    const docSnap = await db.collection(collectionName).doc(id).get();
 
     if (!docSnap.exists) {
       return { success: false, error: "Alumni record not found" };
@@ -87,10 +152,30 @@ export async function getAlumniRegistrationById(
       success: true,
       data: {
         id: docSnap.id,
-        hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
-        passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+        hasPass: Boolean(
+          data?.hasPass ||
+          data?.passStatus === "active" ||
+          data?.paymentStatus === "completed",
+        ),
+        passStatus:
+          data?.passStatus ||
+          (data?.paymentStatus === "completed" ? "active" : "none"),
         passPrice: data?.passPrice || 1000,
         performerStatus: data?.performerStatus || "none",
+        txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
+        paymentMode:
+          data?.paymentMode || data?.paymentDetails?.paymentMethod || "",
+        verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
+        screenshotUrl:
+          data?.screenshotUrl ||
+          data?.paymentScreenshotUrl ||
+          data?.paymentDetails?.screenshotUrl ||
+          "",
+        paymentScreenshotUrl:
+          data?.paymentScreenshotUrl ||
+          data?.screenshotUrl ||
+          data?.paymentDetails?.screenshotUrl ||
+          "",
         ...data,
       } as AlumniRegistration,
     };
@@ -116,8 +201,14 @@ export async function verifyRegistrationCode(
 
     let code = rawInput.trim();
 
-    // If a full ticket or verification URL was scanned, extract the ID
-    if (code.includes("/ticket/")) {
+    // If a full pass or verification URL was scanned, extract the ID
+    if (code.includes("/sanjh-2026/pass/")) {
+      const parts = code.split("/sanjh-2026/pass/");
+      code = parts[parts.length - 1].split("?")[0].split("/")[0].trim();
+    } else if (code.includes("/pass/")) {
+      const parts = code.split("/pass/");
+      code = parts[parts.length - 1].split("?")[0].split("/")[0].trim();
+    } else if (code.includes("/ticket/")) {
       const parts = code.split("/ticket/");
       code = parts[parts.length - 1].split("?")[0].split("/")[0].trim();
     } else if (code.includes("code=")) {
@@ -130,18 +221,21 @@ export async function verifyRegistrationCode(
 
     // 1. Direct Firestore document ID lookup
     try {
-      const docSnap = await db
-        .collection("alumni_registrations")
-        .doc(code)
-        .get();
+      const docSnap = await db.collection(collectionName).doc(code).get();
       if (docSnap.exists) {
         const data = docSnap.data();
         return {
           success: true,
           data: {
             id: docSnap.id,
-            hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
-            passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+            hasPass: Boolean(
+              data?.hasPass ||
+              data?.passStatus === "active" ||
+              data?.paymentStatus === "completed",
+            ),
+            passStatus:
+              data?.passStatus ||
+              (data?.paymentStatus === "completed" ? "active" : "none"),
             passPrice: data?.passPrice || 1000,
             performerStatus: data?.performerStatus || "none",
             ...data,
@@ -155,7 +249,7 @@ export async function verifyRegistrationCode(
     // 2. Try regNumber lookup
     const upperCode = code.toUpperCase();
     const querySnapshot = await db
-      .collection("alumni_registrations")
+      .collection(collectionName)
       .where("regNumber", "==", upperCode)
       .limit(1)
       .get();
@@ -167,8 +261,14 @@ export async function verifyRegistrationCode(
         success: true,
         data: {
           id: docSnap.id,
-          hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
-          passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+          hasPass: Boolean(
+            data?.hasPass ||
+            data?.passStatus === "active" ||
+            data?.paymentStatus === "completed",
+          ),
+          passStatus:
+            data?.passStatus ||
+            (data?.paymentStatus === "completed" ? "active" : "none"),
           passPrice: data?.passPrice || 1000,
           performerStatus: data?.performerStatus || "none",
           ...data,
@@ -178,7 +278,7 @@ export async function verifyRegistrationCode(
 
     // 3. Try rollNumber lookup
     const rollSnapshot = await db
-      .collection("alumni_registrations")
+      .collection(collectionName)
       .where("rollNumber", "==", code)
       .limit(1)
       .get();
@@ -190,8 +290,14 @@ export async function verifyRegistrationCode(
         success: true,
         data: {
           id: docSnap.id,
-          hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
-          passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+          hasPass: Boolean(
+            data?.hasPass ||
+            data?.passStatus === "active" ||
+            data?.paymentStatus === "completed",
+          ),
+          passStatus:
+            data?.passStatus ||
+            (data?.paymentStatus === "completed" ? "active" : "none"),
           passPrice: data?.passPrice || 1000,
           performerStatus: data?.performerStatus || "none",
           ...data,
@@ -219,7 +325,7 @@ export async function markCheckInAtGate(
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
 
-    const docRef = db.collection("alumni_registrations").doc(id);
+    const docRef = db.collection(collectionName).doc(id);
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
       return { success: false, error: "Alumni record not found." };
@@ -229,7 +335,7 @@ export async function markCheckInAtGate(
     const hasActivePass = Boolean(
       data?.hasPass === true ||
       data?.passStatus === "active" ||
-      data?.paymentStatus === "completed"
+      data?.paymentStatus === "completed",
     );
 
     if (!hasActivePass) {
@@ -269,7 +375,7 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
 
     const normalizedEmail = email.trim().toLowerCase();
     const querySnapshot = await db
-      .collection("alumni_registrations")
+      .collection(collectionName)
       .where("email", "==", normalizedEmail)
       .limit(1)
       .get();
@@ -284,8 +390,14 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
       success: true,
       data: {
         id: docSnap.id,
-        hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
-        passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+        hasPass: Boolean(
+          data?.hasPass ||
+          data?.passStatus === "active" ||
+          data?.paymentStatus === "completed",
+        ),
+        passStatus:
+          data?.passStatus ||
+          (data?.paymentStatus === "completed" ? "active" : "none"),
         passPrice: data?.passPrice || 1000,
         performerStatus: data?.performerStatus || "none",
         ...data,
@@ -296,6 +408,103 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
     return {
       success: false,
       error: error?.message || "Failed to fetch registration",
+    };
+  }
+}
+
+/**
+ * Submit manual UPI QR payment with transaction ID and screenshot.
+ * Saves txnId, paymentMode: "UPI_QR", verified: false to Firestore
+ * and sends payment submitted notification email to the user.
+ */
+export async function submitUpiPayment({
+  registrationId,
+  txnId,
+  screenshotUrl,
+}: {
+  registrationId: string;
+  txnId: string;
+  screenshotUrl: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!registrationId) {
+      return { success: false, error: "Registration ID is required." };
+    }
+    if (!txnId || !txnId.trim()) {
+      return { success: false, error: "UPI Transaction ID is required." };
+    }
+    if (!screenshotUrl || !screenshotUrl.trim()) {
+      return {
+        success: false,
+        error: "Payment screenshot containing the transaction ID is required.",
+      };
+    }
+
+    const docRef = db.collection(collectionName).doc(registrationId);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Alumni registration record not found." };
+    }
+
+    const regData = docSnap.data();
+    const now = new Date().toISOString();
+    const trimmedTxnId = txnId.trim();
+
+    await docRef.update({
+      txnId: trimmedTxnId,
+      paymentMode: "UPI_QR",
+      verified: false,
+      screenshotUrl: screenshotUrl.trim(),
+      paymentScreenshotUrl: screenshotUrl.trim(),
+      amount: 1000,
+      paymentStatus: "pending",
+      passPrice: 1000,
+      hasPass: false,
+      passStatus: "none",
+      paymentDetails: {
+        transactionId: trimmedTxnId,
+        paymentMethod: "UPI_QR",
+        paidAt: now,
+        screenshotUrl: screenshotUrl.trim(),
+        verified: false,
+      },
+      updatedAt: now,
+    });
+
+    // Send confirmation email to user upon payment submission
+    try {
+      const updatedReg = {
+        ...regData,
+        id: registrationId,
+        txnId: trimmedTxnId,
+        paymentMode: "UPI_QR",
+        verified: false,
+        screenshotUrl: screenshotUrl.trim(),
+        paymentScreenshotUrl: screenshotUrl.trim(),
+        amount: 1000,
+        paymentStatus: "pending",
+      } as AlumniRegistration;
+
+      const emailTemplate = getPaymentSubmittedEmailTemplate(updatedReg);
+      await sendMail({
+        to: updatedReg.email,
+        subject: emailTemplate.subject,
+        text: emailTemplate.text,
+        html: emailTemplate.html,
+      });
+    } catch (mailErr) {
+      console.error(
+        "Failed to send payment submitted confirmation email:",
+        mailErr,
+      );
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error submitting UPI payment:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to submit UPI payment details",
     };
   }
 }
@@ -316,7 +525,7 @@ export async function updateAlumniPayment(
 
     const now = new Date().toISOString();
     await db
-      .collection("alumni_registrations")
+      .collection(collectionName)
       .doc(id)
       .update({
         hasPass: true,
@@ -362,7 +571,11 @@ export async function submitPerformanceApplication(
       return { success: false, error: "Registration ID is required." };
     }
 
-    if (!application.category || !application.title || !application.description) {
+    if (
+      !application.category ||
+      !application.title ||
+      !application.description
+    ) {
       return {
         success: false,
         error: "Performance Category, Act Title, and Description are required.",
@@ -372,11 +585,12 @@ export async function submitPerformanceApplication(
     if (!application.resumeUrl || !application.resumeUrl.trim()) {
       return {
         success: false,
-        error: "A valid Resume, Portfolio, or Performance Video URL is required.",
+        error:
+          "A valid Resume, Portfolio, or Performance Video URL is required.",
       };
     }
 
-    const docRef = db.collection("alumni_registrations").doc(registrationId);
+    const docRef = db.collection(collectionName).doc(registrationId);
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
       return { success: false, error: "Alumni registration record not found." };
@@ -386,7 +600,7 @@ export async function submitPerformanceApplication(
     const hasActivePass = Boolean(
       reg?.hasPass === true ||
       reg?.passStatus === "active" ||
-      reg?.paymentStatus === "completed"
+      reg?.paymentStatus === "completed",
     );
 
     if (!hasActivePass) {
@@ -405,7 +619,8 @@ export async function submitPerformanceApplication(
       description: application.description.trim(),
       resumeUrl: application.resumeUrl.trim(),
       durationMinutes: application.durationMinutes?.trim() || "5-7 minutes",
-      specialRequirements: application.specialRequirements?.trim() || "Standard stage mic & sound",
+      specialRequirements:
+        application.specialRequirements?.trim() || "Standard stage mic & sound",
       status: "pending",
       appliedAt: now,
     };
@@ -435,7 +650,7 @@ export async function getAllRegistrations(): Promise<{
 }> {
   try {
     const snapshot = await db
-      .collection("alumni_registrations")
+      .collection(collectionName)
       .orderBy("createdAt", "desc")
       .get();
 
@@ -444,10 +659,30 @@ export async function getAllRegistrations(): Promise<{
       const data = doc.data();
       registrations.push({
         id: doc.id,
-        hasPass: Boolean(data?.hasPass || data?.passStatus === "active" || data?.paymentStatus === "completed"),
-        passStatus: data?.passStatus || (data?.paymentStatus === "completed" ? "active" : "none"),
+        hasPass: Boolean(
+          data?.hasPass ||
+          data?.passStatus === "active" ||
+          data?.paymentStatus === "completed",
+        ),
+        passStatus:
+          data?.passStatus ||
+          (data?.paymentStatus === "completed" ? "active" : "none"),
         passPrice: data?.passPrice || 1000,
         performerStatus: data?.performerStatus || "none",
+        txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
+        paymentMode:
+          data?.paymentMode || data?.paymentDetails?.paymentMethod || "",
+        verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
+        screenshotUrl:
+          data?.screenshotUrl ||
+          data?.paymentScreenshotUrl ||
+          data?.paymentDetails?.screenshotUrl ||
+          "",
+        paymentScreenshotUrl:
+          data?.paymentScreenshotUrl ||
+          data?.screenshotUrl ||
+          data?.paymentDetails?.screenshotUrl ||
+          "",
         ...data,
       } as AlumniRegistration);
     });
@@ -472,7 +707,7 @@ export async function getRegistrationStats(): Promise<{
   inPersonAttendees: number;
 }> {
   try {
-    const snapshot = await db.collection("alumni_registrations").get();
+    const snapshot = await db.collection(collectionName).get();
 
     let totalRegistered = 0;
     let passHolders = 0;
@@ -489,7 +724,7 @@ export async function getRegistrationStats(): Promise<{
       const hasPass = Boolean(
         data?.hasPass === true ||
         data?.passStatus === "active" ||
-        data?.paymentStatus === "completed"
+        data?.paymentStatus === "completed",
       );
 
       if (hasPass) {
@@ -499,11 +734,18 @@ export async function getRegistrationStats(): Promise<{
         registeredOnly += 1;
       }
 
-      if (data?.performerStatus === "pending" || data?.performerStatus === "approved" || data?.performanceApplication?.applied) {
+      if (
+        data?.performerStatus === "pending" ||
+        data?.performerStatus === "approved" ||
+        data?.performanceApplication?.applied
+      ) {
         performersApplied += 1;
       }
 
-      if (data?.performerStatus === "approved" || data?.performanceApplication?.status === "approved") {
+      if (
+        data?.performerStatus === "approved" ||
+        data?.performanceApplication?.status === "approved"
+      ) {
         performersApproved += 1;
       }
 

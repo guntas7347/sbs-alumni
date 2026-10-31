@@ -1,7 +1,11 @@
 "use server";
 
 import { db } from "@/lib/firebase/firebase";
-import type { AuthorizedAdmin } from "@/lib/types";
+import { sendMail } from "@/lib/emails/nodemailer";
+import { getPassIssuedEmailTemplate } from "@/lib/emails/templates";
+import type { AuthorizedAdmin, AlumniRegistration } from "@/lib/types";
+
+const collectionName = "alumni_registrations_2026";
 
 export async function verifyAdminEmail(
   email: string
@@ -222,7 +226,7 @@ export async function updateRegistrationStatus(
     if (!id) return { success: false, error: "Registration ID is required" };
 
     const now = new Date().toISOString();
-    const docRef = db.collection("alumni_registrations").doc(id);
+    const docRef = db.collection(collectionName).doc(id);
 
     const updatePayload: Record<string, any> = {
       ...updates,
@@ -248,7 +252,7 @@ export async function deleteRegistration(
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
 
-    await db.collection("alumni_registrations").doc(id).delete();
+    await db.collection(collectionName).doc(id).delete();
     return { success: true };
   } catch (error: any) {
     console.error("Error deleting registration:", error);
@@ -270,7 +274,7 @@ export async function reviewPerformanceApplication(
     if (!id) return { success: false, error: "Registration ID is required" };
 
     const now = new Date().toISOString();
-    const docRef = db.collection("alumni_registrations").doc(id);
+    const docRef = db.collection(collectionName).doc(id);
 
     await docRef.update({
       performerStatus: decision,
@@ -303,7 +307,7 @@ export async function getPerformanceApplications(
 }> {
   try {
     const snapshot = await db
-      .collection("alumni_registrations")
+      .collection(collectionName)
       .orderBy("createdAt", "desc")
       .get();
 
@@ -347,6 +351,103 @@ export async function getPerformanceApplications(
 }
 
 /**
+ * Manually verify or unverify an alumnus's UPI payment.
+ * When verified === true: sets verified: true, hasPass: true, passStatus: "active",
+ * paymentStatus: "completed", and sends the official HTML event pass via email.
+ * When verified === false: reverts verification to false and cancels pass.
+ */
+export async function verifyAlumniPayment(
+  id: string,
+  verified: boolean,
+  adminNotes?: string,
+  verifiedBy?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+
+    const docRef = db.collection(collectionName).doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Alumni record not found." };
+    }
+
+    const regData = docSnap.data();
+    const now = new Date().toISOString();
+
+    if (verified) {
+      const updateData: Record<string, any> = {
+        verified: true,
+        hasPass: true,
+        passStatus: "active",
+        passIssuedAt: now,
+        amount: 1000,
+        paymentStatus: "completed",
+        "paymentDetails.verified": true,
+        "paymentDetails.verifiedAt": now,
+        "paymentDetails.verifiedBy": verifiedBy || "Admin",
+        updatedAt: now,
+      };
+
+      if (adminNotes !== undefined) {
+        updateData.adminNotes = adminNotes.trim();
+      }
+
+      await docRef.update(updateData);
+
+      // Send official Event Pass email in HTML upon verifying payment
+      try {
+        const fullRecord: AlumniRegistration = {
+          ...regData,
+          id,
+          verified: true,
+          hasPass: true,
+          passStatus: "active",
+          passIssuedAt: now,
+          amount: 1000,
+          paymentStatus: "completed",
+          txnId: regData?.txnId || regData?.paymentDetails?.transactionId || "",
+          paymentMode: regData?.paymentMode || "UPI_QR",
+        } as AlumniRegistration;
+
+        const passTemplate = getPassIssuedEmailTemplate(fullRecord, false);
+        await sendMail({
+          to: fullRecord.email,
+          subject: passTemplate.subject,
+          text: passTemplate.text,
+          html: passTemplate.html,
+        });
+      } catch (mailErr) {
+        console.error("Failed to send pass email on verification:", mailErr);
+      }
+    } else {
+      // Unverify
+      const updateData: Record<string, any> = {
+        verified: false,
+        hasPass: false,
+        passStatus: "none",
+        paymentStatus: "pending",
+        "paymentDetails.verified": false,
+        updatedAt: now,
+      };
+
+      if (adminNotes !== undefined) {
+        updateData.adminNotes = adminNotes.trim();
+      }
+
+      await docRef.update(updateData);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error verifying alumni payment:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to update payment verification status",
+    };
+  }
+}
+
+/**
  * Manually issue a complimentary Alumni Meet Pass (for VIPs, Faculty, or special guests)
  */
 export async function issueComplimentaryPass(
@@ -357,22 +458,55 @@ export async function issueComplimentaryPass(
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
 
+    const docRef = db.collection(collectionName).doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Registration record not found" };
+    }
+    const regData = docSnap.data();
     const now = new Date().toISOString();
-    await db.collection("alumni_registrations").doc(id).update({
+
+    await docRef.update({
       hasPass: true,
       passStatus: "active",
       passPrice: 0,
       passIssuedAt: now,
       amount: 0,
+      verified: true,
       paymentStatus: "completed",
       paymentDetails: {
         transactionId: `COMP-${Date.now().toString().slice(-6)}`,
         paymentMethod: `Complimentary Pass (${reason || "Admin Grant"})`,
         paidAt: now,
         referenceNumber: `Issued by ${issuedBy || "Admin"}`,
+        verified: true,
+        verifiedAt: now,
+        verifiedBy: issuedBy || "Admin",
       },
       updatedAt: now,
     });
+
+    // Send official pass in HTML
+    try {
+      const fullRecord: AlumniRegistration = {
+        ...regData,
+        id,
+        hasPass: true,
+        passStatus: "active",
+        amount: 0,
+        paymentStatus: "completed",
+      } as AlumniRegistration;
+
+      const passTemplate = getPassIssuedEmailTemplate(fullRecord, true);
+      await sendMail({
+        to: fullRecord.email,
+        subject: passTemplate.subject,
+        text: passTemplate.text,
+        html: passTemplate.html,
+      });
+    } catch (mailErr) {
+      console.error("Failed to send complimentary pass email:", mailErr);
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -394,7 +528,7 @@ export async function revokePass(
     if (!id) return { success: false, error: "Registration ID is required" };
 
     const now = new Date().toISOString();
-    await db.collection("alumni_registrations").doc(id).update({
+    await db.collection(collectionName).doc(id).update({
       hasPass: false,
       passStatus: "cancelled",
       updatedAt: now,

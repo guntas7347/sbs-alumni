@@ -2,14 +2,16 @@
 
 import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { getAlumniRegistrationById } from "@/lib/actions/alumniActions";
+import { getAlumniRegistrationById, getAllRegistrations } from "@/lib/actions/alumniActions";
 import {
   updateRegistrationStatus,
   deleteRegistration,
   reviewPerformanceApplication,
   issueComplimentaryPass,
   revokePass,
+  verifyAlumniPayment,
 } from "@/lib/actions/adminActions";
 import type { AlumniRegistration } from "@/lib/types";
 import {
@@ -28,15 +30,18 @@ import {
   IndianRupee,
   Loader2,
   AlertCircle,
+  AlertTriangle,
   ExternalLink,
   MessageSquare,
   Award,
   Ticket,
   Video,
   FileText,
+  FileImage,
   Check,
   X,
   XCircle,
+  Eye,
 } from "lucide-react";
 
 export default function AdminDetailClient({
@@ -56,6 +61,8 @@ export default function AdminDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [actingOnPass, setActingOnPass] = useState(false);
   const [reviewingPerf, setReviewingPerf] = useState(false);
+  const [duplicateMatches, setDuplicateMatches] = useState<AlumniRegistration[]>([]);
+  const [viewScreenshotModal, setViewScreenshotModal] = useState(false);
 
   const fetchReg = () => {
     getAlumniRegistrationById(id)
@@ -63,6 +70,20 @@ export default function AdminDetailClient({
         if (res.success && res.data) {
           setRegistration(res.data);
           setAdminNotes(res.data.adminNotes || "");
+
+          if (res.data.txnId) {
+            const tid = res.data.txnId.trim().toLowerCase();
+            getAllRegistrations().then((allRes) => {
+              if (allRes.success && allRes.data) {
+                const matches = allRes.data.filter(
+                  (other) =>
+                    other.id !== res.data!.id &&
+                    other.txnId?.trim().toLowerCase() === tid
+                );
+                setDuplicateMatches(matches);
+              }
+            });
+          }
         } else {
           setError(res.error || "Registration not found");
         }
@@ -74,6 +95,29 @@ export default function AdminDetailClient({
   useEffect(() => {
     fetchReg();
   }, [id]);
+
+  const handleToggleVerify = async (targetVerified: boolean) => {
+    if (!registration) return;
+    const confirmMsg = targetVerified
+      ? `Verify UPI payment of ₹1,000 for ${registration.fullName} (Txn: ${registration.txnId || "N/A"}) and send their official Pass via email?`
+      : `Unverify payment for ${registration.fullName}? This will revoke their active meet pass.`;
+    if (!confirm(confirmMsg)) return;
+
+    setActingOnPass(true);
+    const res = await verifyAlumniPayment(registration.id, targetVerified, adminNotes, "Admin");
+    if (res.success) {
+      setActionSuccess(
+        targetVerified
+          ? "Payment verified & official Event Pass sent via email!"
+          : "Payment marked as unverified."
+      );
+      fetchReg();
+      setTimeout(() => setActionSuccess(null), 3500);
+    } else {
+      alert(res.error || "Failed to update payment verification.");
+    }
+    setActingOnPass(false);
+  };
 
   const handleGrantComplimentaryPass = async () => {
     if (!registration) return;
@@ -234,7 +278,7 @@ export default function AdminDetailClient({
           </Link>
           {registration && (
             <Link
-              href={`/ticket/${registration.id}`}
+              href={`/sanjh-2026/pass/${registration.id}`}
               target="_blank"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-800 text-xs font-semibold border border-orange-200 transition-all"
             >
@@ -314,6 +358,27 @@ export default function AdminDetailClient({
 
             {/* Top Actions */}
             <div className="flex flex-wrap items-center gap-2.5">
+              {/* UPI Payment Verification Buttons */}
+              {registration.verified ? (
+                <button
+                  onClick={() => handleToggleVerify(false)}
+                  disabled={actingOnPass}
+                  className="px-3 py-2 rounded-xl text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 transition-all flex items-center gap-1.5"
+                >
+                  <XCircle className="w-3.5 h-3.5 text-rose-600" />
+                  Unverify Payment
+                </button>
+              ) : registration.txnId ? (
+                <button
+                  onClick={() => handleToggleVerify(true)}
+                  disabled={actingOnPass}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-all shadow-xs flex items-center gap-1.5"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  Verify UPI Payment & Send Pass
+                </button>
+              ) : null}
+
               {!hasPass ? (
                 <button
                   onClick={handleGrantComplimentaryPass}
@@ -559,12 +624,58 @@ export default function AdminDetailClient({
               </dl>
             </div>
 
-            {/* Pass & Payment Details */}
+            {/* UPI QR Payment & Pass Verification Details */}
             <div className="bg-white rounded-3xl border border-zinc-200 p-6 shadow-2xs space-y-4">
-              <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-2 border-b border-zinc-100 pb-2">
-                <Ticket className="w-4 h-4 text-orange-600" />
-                Sanjh 2026 Meet Pass Status
-              </h3>
+              <div className="flex items-center justify-between border-b border-zinc-100 pb-2">
+                <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-2">
+                  <Ticket className="w-4 h-4 text-orange-600" />
+                  UPI Payment & Event Pass
+                </h3>
+                <span
+                  className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                    registration.verified
+                      ? "bg-emerald-100 text-emerald-800"
+                      : registration.txnId
+                      ? "bg-amber-100 text-amber-800"
+                      : "bg-zinc-100 text-zinc-600"
+                  }`}
+                >
+                  {registration.verified
+                    ? "✓ Payment Verified"
+                    : registration.txnId
+                    ? "⏳ Pending Verification"
+                    : "No Payment Submitted"}
+                </span>
+              </div>
+
+              {/* DUPLICATE TXN ID WARNING BANNER IN DETAIL VIEW */}
+              {duplicateMatches.length > 0 && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs space-y-1">
+                  <div className="flex items-center gap-2 font-bold text-rose-900">
+                    <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>CRITICAL WARNING: DUPLICATE TRANSACTION ID!</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-rose-900">
+                    The transaction ID <strong>{registration.txnId}</strong> is also used by{" "}
+                    <strong>{duplicateMatches.length}</strong> other applicant(s):
+                  </p>
+                  <ul className="list-disc list-inside font-mono text-[11px] text-rose-950 pl-1">
+                    {duplicateMatches.map((m) => (
+                      <li key={m.id}>
+                        <Link
+                          href={`/admin/alumni-registrations/${m.id}`}
+                          className="underline hover:text-rose-700"
+                        >
+                          {m.regNumber} ({m.fullName})
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-[10px] text-rose-800 font-medium pt-1">
+                    Please inspect the screenshot below and verify whether this payment was made twice or re-used.
+                  </p>
+                </div>
+              )}
 
               <dl className="space-y-2.5 text-xs">
                 <div className="flex justify-between">
@@ -577,39 +688,105 @@ export default function AdminDetailClient({
                           : "bg-zinc-100 text-zinc-600"
                       }`}
                     >
-                      {hasPass ? "✓ Active (₹1,000 Paid)" : "No Pass (Registered Only)"}
+                      {hasPass ? "✓ Active (Pass Issued)" : "No Pass (Registered Only)"}
                     </span>
                   </dd>
                 </div>
+
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Pass Price:</dt>
                   <dd className="font-extrabold text-orange-600 text-sm">
                     {hasPass ? `₹${registration.amount || 1000}` : "₹0 (Registration)"}
                   </dd>
                 </div>
-                {registration.paymentDetails && (
-                  <>
-                    <div className="flex justify-between">
-                      <dt className="text-zinc-500">Transaction ID:</dt>
-                      <dd className="font-mono text-zinc-800 font-bold">
-                        {registration.paymentDetails.transactionId}
-                      </dd>
+
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">Payment Mode:</dt>
+                  <dd className="font-mono text-zinc-800 font-semibold">
+                    {registration.paymentMode || registration.paymentDetails?.paymentMethod || "UPI_QR"}
+                  </dd>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <dt className="text-zinc-500">Transaction ID (TxnId):</dt>
+                  <dd className="font-mono text-zinc-900 font-bold bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                    {registration.txnId || registration.paymentDetails?.transactionId || "—"}
+                  </dd>
+                </div>
+
+                <div className="flex justify-between">
+                  <dt className="text-zinc-500">Verification Status:</dt>
+                  <dd>
+                    <span
+                      className={`font-bold ${
+                        registration.verified ? "text-emerald-700" : "text-amber-700"
+                      }`}
+                    >
+                      {registration.verified ? "✓ Verified by Admin" : "⏳ Unverified"}
+                    </span>
+                  </dd>
+                </div>
+
+                {/* Screenshot section */}
+                {registration.screenshotUrl ? (
+                  <div className="pt-2 border-t border-zinc-100 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <dt className="text-zinc-500 font-medium">Payment Screenshot:</dt>
+                      <a
+                        href={registration.screenshotUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-orange-600 hover:text-orange-700 underline"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Full Size
+                      </a>
                     </div>
-                    <div className="flex justify-between">
-                      <dt className="text-zinc-500">Payment Gateway:</dt>
-                      <dd className="text-zinc-800">
-                        {registration.paymentDetails.paymentMethod}
-                      </dd>
+
+                    <div
+                      onClick={() => setViewScreenshotModal(true)}
+                      className="cursor-pointer group relative w-full h-44 rounded-xl overflow-hidden border-2 border-zinc-200 bg-zinc-900 hover:border-orange-500 transition-colors shadow-inner"
+                    >
+                      <Image
+                        src={registration.screenshotUrl}
+                        alt="Payment Screenshot"
+                        fill
+                        className="object-contain group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1">
+                        <Eye className="w-4 h-4" />
+                        Click to enlarge screenshot
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <dt className="text-zinc-500">Issued Timestamp:</dt>
-                      <dd className="text-zinc-500">
-                        {new Date(registration.paymentDetails.paidAt).toLocaleString()}
-                      </dd>
-                    </div>
-                  </>
+                  </div>
+                ) : (
+                  <div className="pt-2 border-t border-zinc-100 text-zinc-400 italic text-[11px]">
+                    No screenshot uploaded yet
+                  </div>
                 )}
               </dl>
+
+              {/* Quick Card Action Buttons */}
+              <div className="pt-3 border-t border-zinc-100 flex items-center gap-2">
+                {registration.verified ? (
+                  <button
+                    onClick={() => handleToggleVerify(false)}
+                    disabled={actingOnPass}
+                    className="w-full py-2 px-3 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 transition-colors text-center"
+                  >
+                    Unverify Payment & Revoke Pass
+                  </button>
+                ) : registration.txnId ? (
+                  <button
+                    onClick={() => handleToggleVerify(true)}
+                    disabled={actingOnPass}
+                    className="w-full py-2.5 px-3 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-xs flex items-center justify-center gap-1.5"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Verify Payment & Send Pass Email
+                  </button>
+                ) : null}
+              </div>
             </div>
 
             {/* Attendance & Seating Logistics */}
@@ -626,18 +803,34 @@ export default function AdminDetailClient({
                     {registration.attendanceType || "In-Person"}
                   </dd>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-baseline">
                   <dt className="text-zinc-500">Accompanying Guests:</dt>
                   <dd className="font-semibold text-zinc-800">
-                    {registration.guestCount || 0} Guest(s)
+                    {registration.guests?.length ?? registration.guestCount ?? 0} Guest(s) (Max 3)
                   </dd>
                 </div>
-                <div className="flex justify-between">
-                  <dt className="text-zinc-500">Dinner Preference:</dt>
-                  <dd className="capitalize text-zinc-800">
-                    {registration.dietaryPreference || "Veg"}
-                  </dd>
-                </div>
+                {registration.guests && registration.guests.length > 0 && (
+                  <div className="pt-2 border-t border-zinc-100">
+                    <dt className="text-zinc-500 font-medium mb-1.5 text-[11px]">
+                      Registered Family Members (Mom/Dad/Spouse/Child only):
+                    </dt>
+                    <div className="space-y-1.5">
+                      {registration.guests.map((g, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between bg-zinc-50 border border-zinc-200/80 rounded-lg px-2.5 py-1.5"
+                        >
+                          <span className="font-semibold text-zinc-900 text-xs">
+                            {idx + 1}. {g.name}
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-800 border border-orange-200">
+                            {g.relation}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Venue Gate Check-in:</dt>
                   <dd>
@@ -693,6 +886,58 @@ export default function AdminDetailClient({
             >
               {savingNotes ? "Saving Remarks..." : "Save Admin Notes"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Screenshot Zoom Modal */}
+      {viewScreenshotModal && registration?.screenshotUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 space-y-4 shadow-2xl border border-zinc-200">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-orange-700">
+                  Payment Verification Screenshot
+                </span>
+                <h3 className="text-base font-extrabold text-zinc-900">
+                  {registration.fullName} ({registration.regNumber})
+                </h3>
+              </div>
+              <button
+                onClick={() => setViewScreenshotModal(false)}
+                className="p-1.5 rounded-full hover:bg-zinc-100 text-zinc-400 hover:text-zinc-700 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="relative w-full h-80 sm:h-96 rounded-2xl overflow-hidden bg-zinc-900 border border-zinc-300">
+              <Image
+                src={registration.screenshotUrl}
+                alt="Payment Screenshot"
+                fill
+                className="object-contain"
+              />
+            </div>
+
+            <div className="flex items-center justify-between text-xs pt-1">
+              <a
+                href={registration.screenshotUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-bold text-orange-600 hover:text-orange-700 underline"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                Open Original Image in New Tab
+              </a>
+
+              <button
+                onClick={() => setViewScreenshotModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-zinc-100 hover:bg-zinc-200 text-zinc-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

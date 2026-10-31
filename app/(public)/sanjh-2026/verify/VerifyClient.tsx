@@ -664,20 +664,36 @@ export default function VerifyClient() {
                       : "Honored Attendee"}
                   </span>
                 </div>
-                {Boolean(candidate.guestCount && candidate.guestCount > 0) && (
-                  <div className="flex justify-between">
-                    <span className="text-zinc-500">Accompanying Guests:</span>
-                    <span className="font-semibold text-zinc-800">
-                      +{candidate.guestCount} Guest(s)
-                    </span>
+                {Boolean(
+                  (candidate.guests && candidate.guests.length > 0) ||
+                    (candidate.guestCount && candidate.guestCount > 0)
+                ) && (
+                  <div className="space-y-1.5 pt-1 border-t border-orange-200/60">
+                    <div className="flex justify-between items-baseline">
+                      <span className="text-zinc-500">Accompanying Guests:</span>
+                      <span className="font-bold text-zinc-900">
+                        +{candidate.guests?.length ?? candidate.guestCount ?? 0} Family Member(s)
+                      </span>
+                    </div>
+                    {candidate.guests && candidate.guests.length > 0 && (
+                      <div className="space-y-1 pl-1">
+                        {candidate.guests.map((g, idx) => (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between text-[11px] bg-white/80 border border-orange-200/70 rounded-md px-2 py-0.5"
+                          >
+                            <span className="font-medium text-zinc-800">
+                              {idx + 1}. {g.name}
+                            </span>
+                            <span className="font-bold text-[9px] uppercase px-1.5 py-0.2 rounded bg-orange-100 text-orange-900 border border-orange-200">
+                              {g.relation}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Dinner Preference:</span>
-                  <span className="capitalize font-medium text-zinc-800">
-                    {candidate.dietaryPreference || "Veg"}
-                  </span>
-                </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Attendance:</span>
                   <span className="capitalize font-medium text-zinc-800">

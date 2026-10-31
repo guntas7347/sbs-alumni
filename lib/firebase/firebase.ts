@@ -9,12 +9,16 @@ if (!privateKey) {
   throw new Error("FIREBASE_PRIVATE_KEY is missing");
 }
 
+const isProd = process.env.NODE_ENV === "production";
+
 const admin =
   getApps()[0] ??
   initializeApp({
     credential: cert({
-      projectId: "sbs-alumni",
-      clientEmail: "firebase-adminsdk-fbsvc@sbs-alumni.iam.gserviceaccount.com",
+      projectId: isProd ? "alumni-sbssu" : "sbs-alumni",
+      clientEmail: isProd
+        ? "firebase-adminsdk-fbsvc@alumni-sbssu.iam.gserviceaccount.com"
+        : "firebase-adminsdk-fbsvc@sbs-alumni.iam.gserviceaccount.com",
       privateKey,
     }),
   });

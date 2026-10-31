@@ -479,7 +479,7 @@ export default function AdminRazorpayPage() {
                           </span>
                         ) : payment.notes?.registrationId ? (
                           <Link
-                            href={`/ticket/${payment.notes.registrationId}`}
+                            href={`/sanjh-2026/pass/${payment.notes.registrationId}`}
                             target="_blank"
                             className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 hover:underline"
                           >
