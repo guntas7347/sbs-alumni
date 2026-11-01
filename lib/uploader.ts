@@ -36,8 +36,10 @@ export async function uploadFile(formData: FormData) {
 
     const extension = path.extname(file.name).toLowerCase();
     const filename = `${randomUUID()}${extension}`;
-    const filePath = path.join(UPLOAD_DIR, filename);
-
+    const filePath = path.join(
+      /* turbopackIgnore: true */ UPLOAD_DIR,
+      filename,
+    );
     const buffer = Buffer.from(await file.arrayBuffer());
 
     await writeFile(filePath, buffer, { flag: "wx" });

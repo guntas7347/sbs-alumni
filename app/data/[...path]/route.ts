@@ -34,7 +34,8 @@ export async function GET(
       return new NextResponse("Invalid path", { status: 400 });
     }
 
-    const root = path.resolve(UPLOAD_DIR);
+    const root = path.resolve(/* turbopackIgnore: true */ UPLOAD_DIR);
+
     const filePath = path.resolve(root, ...segments);
     const relative = path.relative(root, filePath);
 

@@ -138,7 +138,7 @@ export default function PaymentClient({
         formData.append("file", selectedFile);
 
         const uploadRes = await uploadFile(formData);
-        if (!uploadRes.success || !uploadRes.url) {
+        if (!uploadRes.success || !uploadRes.path) {
           setError(
             uploadRes.error ||
               "Failed to upload payment screenshot. Please try again.",
@@ -147,7 +147,7 @@ export default function PaymentClient({
           return;
         }
 
-        finalScreenshotUrl = uploadRes.url;
+        finalScreenshotUrl = uploadRes.path;
       }
 
       // Submit UPI payment to Firestore
