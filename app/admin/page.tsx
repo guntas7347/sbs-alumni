@@ -49,6 +49,7 @@ import {
   Mic,
   Camera,
   RotateCcw,
+  Download,
 } from "lucide-react";
 
 type FilterTab =
@@ -67,7 +68,9 @@ export default function AdminRegistrationsPage() {
   const [currentTab, setCurrentTab] = useState<FilterTab>("all");
 
   // Selected registration for Detail Modal
-  const [selectedReg, setSelectedReg] = useState<AlumniRegistration | null>(null);
+  const [selectedReg, setSelectedReg] = useState<AlumniRegistration | null>(
+    null,
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<AlumniRegistration>>({});
   const [savingEdit, setSavingEdit] = useState(false);
@@ -78,7 +81,9 @@ export default function AdminRegistrationsPage() {
   } | null>(null);
 
   // Full screenshot preview modal
-  const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
+  const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<
+    string | null
+  >(null);
 
   // Bulk email reminder state
   const [bulkEmailLoading, setBulkEmailLoading] = useState(false);
@@ -129,14 +134,50 @@ export default function AdminRegistrationsPage() {
     (r.attendanceType as string) === "supporting" ||
     (!isAttendingRecord(r) && !isPendingRecord(r));
 
+  const exportToCSV = async (registrations: Record<string, any>[]) => {
+    if (!registrations?.length) return;
+
+    const headers = Object.keys(registrations[0]);
+
+    const escapeCSV = (value: any) => {
+      if (value === null || value === undefined) return '""';
+
+      const str =
+        typeof value === "object" ? JSON.stringify(value) : String(value);
+
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const csv = [
+      headers.map(escapeCSV).join(","),
+      ...registrations.map((row) =>
+        headers.map((header) => escapeCSV(row[header])).join(","),
+      ),
+    ].join("\r\n");
+
+    // BOM ensures Excel correctly detects UTF-8 (including Punjabi/Hindi).
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `registrations-${new Date().toISOString().slice(0, 10)}.csv`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
   // Bulk reminder email handler
   const handleSendBulkReminder = async () => {
     setBulkEmailLoading(true);
     setBulkEmailResult(null);
     try {
-      const pendingIds = registrations
-        .filter(isPendingRecord)
-        .map((r) => r.id);
+      const pendingIds = registrations.filter(isPendingRecord).map((r) => r.id);
 
       const res = await sendBulkPaymentProofReminders(pendingIds);
       if (res.success) {
@@ -206,13 +247,13 @@ export default function AdminRegistrationsPage() {
       (r) =>
         r.wantToPerform ||
         (r.performanceStatus && r.performanceStatus !== "none") ||
-        (r.performerStatus && r.performerStatus !== "none")
+        (r.performerStatus && r.performerStatus !== "none"),
     ).length;
     const vcCount = registrations.filter(
       (r) =>
         r.wantToInteractWithVC ||
         (r.vcInteractionStatus && r.vcInteractionStatus !== "none") ||
-        Boolean(r.vcInteractionReason)
+        Boolean(r.vcInteractionReason),
     ).length;
 
     return {
@@ -241,14 +282,14 @@ export default function AdminRegistrationsPage() {
         (r) =>
           r.wantToPerform ||
           (r.performanceStatus && r.performanceStatus !== "none") ||
-          (r.performerStatus && r.performerStatus !== "none")
+          (r.performerStatus && r.performerStatus !== "none"),
       );
     } else if (currentTab === "vc_interactions") {
       list = list.filter(
         (r) =>
           r.wantToInteractWithVC ||
           (r.vcInteractionStatus && r.vcInteractionStatus !== "none") ||
-          Boolean(r.vcInteractionReason)
+          Boolean(r.vcInteractionReason),
       );
     }
 
@@ -323,10 +364,13 @@ export default function AdminRegistrationsPage() {
         });
         setIsEditing(false);
         // Refresh local record and list
-        const updatedRecord = { ...selectedReg, ...editForm } as AlumniRegistration;
+        const updatedRecord = {
+          ...selectedReg,
+          ...editForm,
+        } as AlumniRegistration;
         setSelectedReg(updatedRecord);
         setRegistrations((prev) =>
-          prev.map((r) => (r.id === selectedReg.id ? updatedRecord : r))
+          prev.map((r) => (r.id === selectedReg.id ? updatedRecord : r)),
         );
       } else {
         setModalFeedback({
@@ -347,14 +391,18 @@ export default function AdminRegistrationsPage() {
   // Approve / Reject / Revoke Stage Performance
   const handlePerformanceDecision = async (
     status: "approved" | "rejected" | "none" | "pending",
-    remarks: string = ""
+    remarks: string = "",
   ) => {
     if (!selectedReg) return;
     setActionLoading(`perf-${status}`);
     setModalFeedback(null);
 
     try {
-      const res = await updatePerformanceStatus(selectedReg.id, status, remarks);
+      const res = await updatePerformanceStatus(
+        selectedReg.id,
+        status,
+        remarks,
+      );
       if (res.success) {
         const updated = {
           ...selectedReg,
@@ -363,7 +411,7 @@ export default function AdminRegistrationsPage() {
         };
         setSelectedReg(updated);
         setRegistrations((prev) =>
-          prev.map((r) => (r.id === selectedReg.id ? updated : r))
+          prev.map((r) => (r.id === selectedReg.id ? updated : r)),
         );
         setModalFeedback({
           type: "success",
@@ -388,14 +436,18 @@ export default function AdminRegistrationsPage() {
   // Approve / Reject / Revoke VC Interaction
   const handleVCDecision = async (
     status: "approved" | "rejected" | "none" | "pending",
-    remarks: string = ""
+    remarks: string = "",
   ) => {
     if (!selectedReg) return;
     setActionLoading(`vc-${status}`);
     setModalFeedback(null);
 
     try {
-      const res = await updateVCInteractionStatus(selectedReg.id, status, remarks);
+      const res = await updateVCInteractionStatus(
+        selectedReg.id,
+        status,
+        remarks,
+      );
       if (res.success) {
         const updated = {
           ...selectedReg,
@@ -404,7 +456,7 @@ export default function AdminRegistrationsPage() {
         };
         setSelectedReg(updated);
         setRegistrations((prev) =>
-          prev.map((r) => (r.id === selectedReg.id ? updated : r))
+          prev.map((r) => (r.id === selectedReg.id ? updated : r)),
         );
         setModalFeedback({
           type: "success",
@@ -433,7 +485,12 @@ export default function AdminRegistrationsPage() {
     setModalFeedback(null);
 
     try {
-      const res = await verifyAlumniPayment(selectedReg.id, newStatus, "", "Admin");
+      const res = await verifyAlumniPayment(
+        selectedReg.id,
+        newStatus,
+        "",
+        "Admin",
+      );
       if (res.success) {
         const updated = {
           ...selectedReg,
@@ -444,7 +501,7 @@ export default function AdminRegistrationsPage() {
         };
         setSelectedReg(updated);
         setRegistrations((prev) =>
-          prev.map((r) => (r.id === selectedReg.id ? updated : r))
+          prev.map((r) => (r.id === selectedReg.id ? updated : r)),
         );
         setModalFeedback({
           type: "success",
@@ -481,7 +538,8 @@ export default function AdminRegistrationsPage() {
             Alumni Registrations
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500">
-            View all alumni registrations, filter by stage performances or VC interactions, review requests, and edit any record.
+            View all alumni registrations, filter by stage performances or VC
+            interactions, review requests, and edit any record.
           </p>
         </div>
 
@@ -491,8 +549,16 @@ export default function AdminRegistrationsPage() {
             disabled={refreshing}
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white hover:bg-zinc-50 text-zinc-700 font-semibold text-xs border border-zinc-200 shadow-2xs transition-all disabled:opacity-50"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-orange-600" : ""}`} />
+            <RefreshCw
+              className={`w-3.5 h-3.5 ${refreshing ? "animate-spin text-orange-600" : ""}`}
+            />
             Refresh
+          </button>
+          <button
+            onClick={() => exportToCSV(registrations)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-xs shadow-2xs transition-colors"
+          >
+            <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
           <Link
             href="/admin/transactions"
@@ -514,8 +580,12 @@ export default function AdminRegistrationsPage() {
               : "bg-white border-zinc-200 hover:border-zinc-300"
           }`}
         >
-          <span className="text-[11px] font-semibold text-zinc-500 block">Total Registered</span>
-          <div className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">{counts.total}</div>
+          <span className="text-[11px] font-semibold text-zinc-500 block">
+            Total Registered
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">
+            {counts.total}
+          </div>
           <span className="text-[10px] text-zinc-400">All submissions</span>
         </button>
 
@@ -527,11 +597,15 @@ export default function AdminRegistrationsPage() {
               : "bg-white border-zinc-200 hover:border-zinc-300"
           }`}
         >
-          <span className="text-[11px] font-semibold text-emerald-800 block">Attending Meet</span>
+          <span className="text-[11px] font-semibold text-emerald-800 block">
+            Attending Meet
+          </span>
           <div className="text-xl sm:text-2xl font-black text-emerald-950 mt-0.5">
             {counts.attendingCount}
           </div>
-          <span className="text-[10px] text-emerald-700">Proof uploaded / pass</span>
+          <span className="text-[10px] text-emerald-700">
+            Proof uploaded / pass
+          </span>
         </button>
 
         <button
@@ -543,12 +617,15 @@ export default function AdminRegistrationsPage() {
           }`}
         >
           <span className="text-[11px] font-semibold text-rose-800 block flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> Pending (₹1,000)
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> Pending
+            (₹1,000)
           </span>
           <div className="text-xl sm:text-2xl font-black text-rose-950 mt-0.5">
             {counts.pendingCount}
           </div>
-          <span className="text-[10px] text-rose-700">Proof missing / closed site</span>
+          <span className="text-[10px] text-rose-700">
+            Proof missing / closed site
+          </span>
         </button>
 
         <button
@@ -559,9 +636,15 @@ export default function AdminRegistrationsPage() {
               : "bg-white border-zinc-200 hover:border-zinc-300"
           }`}
         >
-          <span className="text-[11px] font-semibold text-zinc-600 block">Non-Attending</span>
-          <div className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">{counts.nonAttendingCount}</div>
-          <span className="text-[10px] text-zinc-400">Directory only (Free)</span>
+          <span className="text-[11px] font-semibold text-zinc-600 block">
+            Non-Attending
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">
+            {counts.nonAttendingCount}
+          </div>
+          <span className="text-[10px] text-zinc-400">
+            Directory only (Free)
+          </span>
         </button>
 
         <button
@@ -578,7 +661,9 @@ export default function AdminRegistrationsPage() {
           <div className="text-xl sm:text-2xl font-black text-amber-950 mt-0.5">
             {counts.performerCount}
           </div>
-          <span className="text-[10px] text-amber-700">Performance requests</span>
+          <span className="text-[10px] text-amber-700">
+            Performance requests
+          </span>
         </button>
 
         <button
@@ -592,8 +677,12 @@ export default function AdminRegistrationsPage() {
           <span className="text-[11px] font-semibold text-blue-900 block flex items-center gap-1">
             <HeartHandshake className="w-3 h-3 text-blue-600" /> VC Meetings
           </span>
-          <div className="text-xl sm:text-2xl font-black text-blue-950 mt-0.5">{counts.vcCount}</div>
-          <span className="text-[10px] text-blue-700">VC interaction requests</span>
+          <div className="text-xl sm:text-2xl font-black text-blue-950 mt-0.5">
+            {counts.vcCount}
+          </div>
+          <span className="text-[10px] text-blue-700">
+            VC interaction requests
+          </span>
         </button>
       </div>
 
@@ -610,11 +699,16 @@ export default function AdminRegistrationsPage() {
                   {counts.pendingCount} Pending
                 </span>
                 <span className="text-xs font-bold text-zinc-800">
-                  Selected ₹1,000 meet pass, but closed website without uploading payment proof
+                  Selected ₹1,000 meet pass, but closed website without
+                  uploading payment proof
                 </span>
               </div>
               <p className="text-xs text-zinc-600 leading-relaxed max-w-2xl">
-                These alumni opted to attend Sanjh 2026, but have not uploaded their payment screenshot and UPI Transaction ID. They may have paid at the QR code. You can send them a direct email with their personal link to upload their screenshot or be marked as directory registration only.
+                These alumni opted to attend Sanjh 2026, but have not uploaded
+                their payment screenshot and UPI Transaction ID. They may have
+                paid at the QR code. You can send them a direct email with their
+                personal link to upload their screenshot or be marked as
+                directory registration only.
               </p>
             </div>
           </div>
@@ -625,7 +719,9 @@ export default function AdminRegistrationsPage() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs transition-all shrink-0 disabled:opacity-50"
           >
             <Mail className="w-4 h-4" />
-            {bulkEmailLoading ? "Sending Emails..." : `Email All ${counts.pendingCount} Pending Alumni`}
+            {bulkEmailLoading
+              ? "Sending Emails..."
+              : `Email All ${counts.pendingCount} Pending Alumni`}
           </button>
         </div>
       )}
@@ -680,13 +776,16 @@ export default function AdminRegistrationsPage() {
           </div>
 
           <div className="text-xs text-zinc-500 font-medium self-end sm:self-center">
-            Showing <strong>{filteredRegistrations.length}</strong> of {registrations.length} registrations
+            Showing <strong>{filteredRegistrations.length}</strong> of{" "}
+            {registrations.length} registrations
           </div>
         </div>
 
         {/* Tab Filter Pills */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-zinc-100 text-xs">
-          <span className="text-zinc-400 text-[11px] mr-1 font-semibold">Filter:</span>
+          <span className="text-zinc-400 text-[11px] mr-1 font-semibold">
+            Filter:
+          </span>
           <button
             onClick={() => setCurrentTab("all")}
             className={`px-3 py-1 rounded-lg font-semibold transition-colors ${
@@ -757,14 +856,18 @@ export default function AdminRegistrationsPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-zinc-200">
           <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
-          <p className="text-xs text-zinc-500 font-medium">Fetching all registrations from Firestore...</p>
+          <p className="text-xs text-zinc-500 font-medium">
+            Fetching all registrations from Firestore...
+          </p>
         </div>
       ) : filteredRegistrations.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-zinc-200 p-8 space-y-3">
           <div className="w-12 h-12 mx-auto rounded-full bg-zinc-100 text-zinc-400 flex items-center justify-center">
             <Users className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-bold text-zinc-900">No registrations found</h3>
+          <h3 className="text-sm font-bold text-zinc-900">
+            No registrations found
+          </h3>
           <p className="text-xs text-zinc-500 max-w-sm mx-auto">
             {search
               ? `No registrations match your search query "${search}". Try clearing search or switching filter tabs.`
@@ -796,14 +899,17 @@ export default function AdminRegistrationsPage() {
               <tbody className="divide-y divide-zinc-200">
                 {filteredRegistrations.map((reg) => {
                   const isAttending = isAttendingRecord(reg);
-                  const isVerified = reg.verified || reg.hasPass || reg.passStatus === "active";
+                  const isVerified =
+                    reg.verified || reg.hasPass || reg.passStatus === "active";
                   const hasStage =
                     reg.wantToPerform ||
-                    (reg.performanceStatus && reg.performanceStatus !== "none") ||
+                    (reg.performanceStatus &&
+                      reg.performanceStatus !== "none") ||
                     (reg.performerStatus && reg.performerStatus !== "none");
                   const hasVC =
                     reg.wantToInteractWithVC ||
-                    (reg.vcInteractionStatus && reg.vcInteractionStatus !== "none") ||
+                    (reg.vcInteractionStatus &&
+                      reg.vcInteractionStatus !== "none") ||
                     Boolean(reg.vcInteractionReason);
 
                   return (
@@ -813,17 +919,27 @@ export default function AdminRegistrationsPage() {
                     >
                       {/* Column 1: Reg # & Date */}
                       <td className="py-3.5 px-4">
-                        <div className="font-mono font-bold text-zinc-900">{reg.regNumber}</div>
+                        <div className="font-mono font-bold text-zinc-900">
+                          {reg.regNumber}
+                        </div>
                         <div className="text-[10px] text-zinc-400 mt-0.5">
-                          {reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : "—"}
+                          {reg.createdAt
+                            ? new Date(reg.createdAt).toLocaleDateString()
+                            : "—"}
                         </div>
                       </td>
 
                       {/* Column 2: Alumnus Details */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-zinc-900">{reg.fullName}</div>
-                        <div className="text-[11px] text-zinc-500 font-mono">{reg.email}</div>
-                        <div className="text-[10px] text-zinc-400">{reg.phone}</div>
+                        <div className="font-bold text-zinc-900">
+                          {reg.fullName}
+                        </div>
+                        <div className="text-[11px] text-zinc-500 font-mono">
+                          {reg.email}
+                        </div>
+                        <div className="text-[10px] text-zinc-400">
+                          {reg.phone}
+                        </div>
                       </td>
 
                       {/* Column 3: Academic / Organization */}
@@ -836,7 +952,9 @@ export default function AdminRegistrationsPage() {
                         </div>
                         {reg.organization && (
                           <div className="text-[10px] text-zinc-400 truncate max-w-[180px]">
-                            {reg.currentDesignation ? `${reg.currentDesignation} at ` : ""}
+                            {reg.currentDesignation
+                              ? `${reg.currentDesignation} at `
+                              : ""}
                             {reg.organization}
                           </div>
                         )}
@@ -847,11 +965,13 @@ export default function AdminRegistrationsPage() {
                         <div>
                           {isAttendingRecord(reg) ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Attending (₹1,000)
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />{" "}
+                              Attending (₹1,000)
                             </span>
                           ) : isPendingRecord(reg) ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-300">
-                              <AlertTriangle className="w-3 h-3 text-rose-600" /> Pending (₹1,000)
+                              <AlertTriangle className="w-3 h-3 text-rose-600" />{" "}
+                              Pending (₹1,000)
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
@@ -868,7 +988,8 @@ export default function AdminRegistrationsPage() {
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded">
-                                <Clock className="w-2.5 h-2.5" /> Pending Verification
+                                <Clock className="w-2.5 h-2.5" /> Pending
+                                Verification
                               </span>
                             )}
                           </div>
@@ -887,17 +1008,22 @@ export default function AdminRegistrationsPage() {
                               title="Send payment proof upload reminder email"
                             >
                               <Mail className="w-3 h-3 text-orange-600" />
-                              {actionLoading === `reminder-${reg.id}` ? "Sending..." : "Send Reminder"}
+                              {actionLoading === `reminder-${reg.id}`
+                                ? "Sending..."
+                                : "Send Reminder"}
                             </button>
                           </div>
                         )}
 
                         {/* Guest Count Badge */}
-                        {(isAttending || isPendingRecord(reg)) && reg.guestCount && reg.guestCount !== "0" && (
-                          <div className="text-[10px] text-zinc-500">
-                            +{reg.guestCount} Guest{reg.guestCount !== "1" ? "s" : ""}
-                          </div>
-                        )}
+                        {(isAttending || isPendingRecord(reg)) &&
+                          reg.guestCount &&
+                          reg.guestCount !== "0" && (
+                            <div className="text-[10px] text-zinc-500">
+                              +{reg.guestCount} Guest
+                              {reg.guestCount !== "1" ? "s" : ""}
+                            </div>
+                          )}
                       </td>
 
                       {/* Column 5: Special & Stage Requests */}
@@ -909,8 +1035,8 @@ export default function AdminRegistrationsPage() {
                                 reg.performanceStatus === "approved"
                                   ? "bg-emerald-100 text-emerald-800"
                                   : reg.performanceStatus === "rejected"
-                                  ? "bg-rose-100 text-rose-800"
-                                  : "bg-amber-100 text-amber-900"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : "bg-amber-100 text-amber-900"
                               }`}
                             >
                               <Music className="w-2.5 h-2.5" />
@@ -926,8 +1052,8 @@ export default function AdminRegistrationsPage() {
                                 reg.vcInteractionStatus === "approved"
                                   ? "bg-blue-100 text-blue-800"
                                   : reg.vcInteractionStatus === "rejected"
-                                  ? "bg-rose-100 text-rose-800"
-                                  : "bg-blue-50 text-blue-900"
+                                    ? "bg-rose-100 text-rose-800"
+                                    : "bg-blue-50 text-blue-900"
                               }`}
                             >
                               <HeartHandshake className="w-2.5 h-2.5" />
@@ -941,7 +1067,10 @@ export default function AdminRegistrationsPage() {
                             title={`Special Request: ${reg.specialRequest}`}
                             className="text-[10px] text-zinc-500 truncate max-w-[150px]"
                           >
-                            <span className="font-semibold text-zinc-700">Req:</span> {reg.specialRequest}
+                            <span className="font-semibold text-zinc-700">
+                              Req:
+                            </span>{" "}
+                            {reg.specialRequest}
                           </div>
                         )}
 
@@ -985,15 +1114,15 @@ export default function AdminRegistrationsPage() {
                       isAttendingRecord(selectedReg)
                         ? "bg-emerald-100 text-emerald-800"
                         : isPendingRecord(selectedReg)
-                        ? "bg-rose-100 text-rose-800 border border-rose-300"
-                        : "bg-zinc-200 text-zinc-700"
+                          ? "bg-rose-100 text-rose-800 border border-rose-300"
+                          : "bg-zinc-200 text-zinc-700"
                     }`}
                   >
                     {isAttendingRecord(selectedReg)
                       ? "Attending (₹1,000)"
                       : isPendingRecord(selectedReg)
-                      ? "Pending (₹1,000)"
-                      : "Non-Attending (Free)"}
+                        ? "Pending (₹1,000)"
+                        : "Non-Attending (Free)"}
                   </span>
                   {selectedReg.verified && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white flex items-center gap-1">
@@ -1055,31 +1184,44 @@ export default function AdminRegistrationsPage() {
                     {/* Alumnus Identity */}
                     <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 space-y-2.5">
                       <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-orange-600" /> Personal Information
+                        <User className="w-3.5 h-3.5 text-orange-600" />{" "}
+                        Personal Information
                       </span>
                       <div className="text-xs space-y-1.5">
                         <div>
                           <span className="text-zinc-400">Full Name:</span>{" "}
-                          <strong className="text-zinc-900">{selectedReg.fullName}</strong>
+                          <strong className="text-zinc-900">
+                            {selectedReg.fullName}
+                          </strong>
                         </div>
                         <div>
                           <span className="text-zinc-400">Google Email:</span>{" "}
-                          <span className="font-mono text-zinc-800">{selectedReg.email}</span>
+                          <span className="font-mono text-zinc-800">
+                            {selectedReg.email}
+                          </span>
                         </div>
                         <div>
                           <span className="text-zinc-400">Phone:</span>{" "}
-                          <span className="text-zinc-800">{selectedReg.phone}</span>
+                          <span className="text-zinc-800">
+                            {selectedReg.phone}
+                          </span>
                         </div>
                         {selectedReg.whatsapp && (
                           <div>
                             <span className="text-zinc-400">WhatsApp:</span>{" "}
-                            <span className="text-zinc-800">{selectedReg.whatsapp}</span>
+                            <span className="text-zinc-800">
+                              {selectedReg.whatsapp}
+                            </span>
                           </div>
                         )}
                         <div>
                           <span className="text-zinc-400">Location:</span>{" "}
                           <span className="text-zinc-800">
-                            {[selectedReg.city, selectedReg.state, selectedReg.country]
+                            {[
+                              selectedReg.city,
+                              selectedReg.state,
+                              selectedReg.country,
+                            ]
                               .filter(Boolean)
                               .join(", ") || "—"}
                           </span>
@@ -1103,36 +1245,51 @@ export default function AdminRegistrationsPage() {
                     {/* Academic & Professional */}
                     <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 space-y-2.5">
                       <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <GraduationCap className="w-3.5 h-3.5 text-orange-600" /> Academic & Career
+                        <GraduationCap className="w-3.5 h-3.5 text-orange-600" />{" "}
+                        Academic & Career
                       </span>
                       <div className="text-xs space-y-1.5">
                         <div>
-                          <span className="text-zinc-400">Degree & Branch:</span>{" "}
+                          <span className="text-zinc-400">
+                            Degree & Branch:
+                          </span>{" "}
                           <strong className="text-zinc-900">
                             {selectedReg.degree} {selectedReg.branch}
                           </strong>
                         </div>
                         <div>
                           <span className="text-zinc-400">Passing Year:</span>{" "}
-                          <strong className="text-zinc-900">{selectedReg.passingYear}</strong>
+                          <strong className="text-zinc-900">
+                            {selectedReg.passingYear}
+                          </strong>
                         </div>
                         <div>
                           <span className="text-zinc-400">University Era:</span>{" "}
-                          <span className="text-zinc-800 font-semibold">{selectedReg.era || "SBSSU"}</span>
+                          <span className="text-zinc-800 font-semibold">
+                            {selectedReg.era || "SBSSU"}
+                          </span>
                         </div>
                         {selectedReg.rollNumber && (
                           <div>
                             <span className="text-zinc-400">Roll Number:</span>{" "}
-                            <span className="font-mono text-zinc-800">{selectedReg.rollNumber}</span>
+                            <span className="font-mono text-zinc-800">
+                              {selectedReg.rollNumber}
+                            </span>
                           </div>
                         )}
                         <div>
-                          <span className="text-zinc-400">Designation / Role:</span>{" "}
-                          <span className="text-zinc-800">{selectedReg.currentDesignation || "—"}</span>
+                          <span className="text-zinc-400">
+                            Designation / Role:
+                          </span>{" "}
+                          <span className="text-zinc-800">
+                            {selectedReg.currentDesignation || "—"}
+                          </span>
                         </div>
                         <div>
                           <span className="text-zinc-400">Organization:</span>{" "}
-                          <span className="text-zinc-800">{selectedReg.organization || "—"}</span>
+                          <span className="text-zinc-800">
+                            {selectedReg.organization || "—"}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1141,48 +1298,73 @@ export default function AdminRegistrationsPage() {
                   {/* Accompanying Guests */}
                   <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 space-y-2">
                     <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-orange-600" /> Accompanying Guests (Max 3)
+                      <Users className="w-3.5 h-3.5 text-orange-600" />{" "}
+                      Accompanying Guests (Max 3)
                     </span>
-                    {selectedReg.guestCount && selectedReg.guestCount !== "0" ? (
+                    {selectedReg.guestCount &&
+                    selectedReg.guestCount !== "0" ? (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                         {selectedReg.guest1Name && (
                           <div className="p-2.5 rounded-xl bg-white border border-zinc-200 text-xs">
-                            <span className="text-zinc-400 text-[10px] block font-semibold">Guest 1</span>
-                            <div className="font-bold text-zinc-900">{selectedReg.guest1Name}</div>
-                            <div className="text-zinc-500 text-[11px]">Relation: {selectedReg.guest1Relation || "—"}</div>
+                            <span className="text-zinc-400 text-[10px] block font-semibold">
+                              Guest 1
+                            </span>
+                            <div className="font-bold text-zinc-900">
+                              {selectedReg.guest1Name}
+                            </div>
+                            <div className="text-zinc-500 text-[11px]">
+                              Relation: {selectedReg.guest1Relation || "—"}
+                            </div>
                           </div>
                         )}
                         {selectedReg.guest2Name && (
                           <div className="p-2.5 rounded-xl bg-white border border-zinc-200 text-xs">
-                            <span className="text-zinc-400 text-[10px] block font-semibold">Guest 2</span>
-                            <div className="font-bold text-zinc-900">{selectedReg.guest2Name}</div>
-                            <div className="text-zinc-500 text-[11px]">Relation: {selectedReg.guest2Relation || "—"}</div>
+                            <span className="text-zinc-400 text-[10px] block font-semibold">
+                              Guest 2
+                            </span>
+                            <div className="font-bold text-zinc-900">
+                              {selectedReg.guest2Name}
+                            </div>
+                            <div className="text-zinc-500 text-[11px]">
+                              Relation: {selectedReg.guest2Relation || "—"}
+                            </div>
                           </div>
                         )}
                         {selectedReg.guest3Name && (
                           <div className="p-2.5 rounded-xl bg-white border border-zinc-200 text-xs">
-                            <span className="text-zinc-400 text-[10px] block font-semibold">Guest 3</span>
-                            <div className="font-bold text-zinc-900">{selectedReg.guest3Name}</div>
-                            <div className="text-zinc-500 text-[11px]">Relation: {selectedReg.guest3Relation || "—"}</div>
+                            <span className="text-zinc-400 text-[10px] block font-semibold">
+                              Guest 3
+                            </span>
+                            <div className="font-bold text-zinc-900">
+                              {selectedReg.guest3Name}
+                            </div>
+                            <div className="text-zinc-500 text-[11px]">
+                              Relation: {selectedReg.guest3Relation || "—"}
+                            </div>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">No accompanying guests registered.</p>
+                      <p className="text-xs text-zinc-500">
+                        No accompanying guests registered.
+                      </p>
                     )}
                   </div>
 
                   {/* SPECIAL REQUEST CALLOUT */}
                   <div className="bg-amber-50/50 rounded-2xl border border-amber-200 p-4 space-y-1.5">
                     <span className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-amber-600" /> Special Request
+                      <MessageSquare className="w-3.5 h-3.5 text-amber-600" />{" "}
+                      Special Request
                     </span>
                     {selectedReg.specialRequest ? (
                       <p className="text-xs text-zinc-800 bg-white p-3 rounded-xl border border-amber-200 leading-relaxed">
                         {selectedReg.specialRequest}
                       </p>
                     ) : (
-                      <p className="text-xs text-zinc-400 italic">None entered (Default: "")</p>
+                      <p className="text-xs text-zinc-400 italic">
+                        None entered (Default: "")
+                      </p>
                     )}
                   </div>
 
@@ -1202,7 +1384,8 @@ export default function AdminRegistrationsPage() {
                   <div className="bg-zinc-50 rounded-2xl border border-zinc-200 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Ticket className="w-3.5 h-3.5 text-orange-600" /> UPI Payment & Verification
+                        <Ticket className="w-3.5 h-3.5 text-orange-600" /> UPI
+                        Payment & Verification
                       </span>
                       <div className="flex items-center gap-2">
                         {selectedReg.verified ? (
@@ -1211,7 +1394,9 @@ export default function AdminRegistrationsPage() {
                             disabled={actionLoading === "pay-false"}
                             className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-2xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "pay-false" ? "Revoking..." : "Revoke / Unverify"}
+                            {actionLoading === "pay-false"
+                              ? "Revoking..."
+                              : "Revoke / Unverify"}
                           </button>
                         ) : (
                           <button
@@ -1219,7 +1404,9 @@ export default function AdminRegistrationsPage() {
                             disabled={actionLoading === "pay-true"}
                             className="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "pay-true" ? "Verifying..." : "Verify & Issue Pass"}
+                            {actionLoading === "pay-true"
+                              ? "Verifying..."
+                              : "Verify & Issue Pass"}
                           </button>
                         )}
                       </div>
@@ -1227,39 +1414,51 @@ export default function AdminRegistrationsPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                       <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
-                        <span className="text-zinc-400 text-[10px] block">Txn ID</span>
+                        <span className="text-zinc-400 text-[10px] block">
+                          Txn ID
+                        </span>
                         <span className="font-mono font-bold text-zinc-900 break-all">
                           {selectedReg.txnId || "N/A"}
                         </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
-                        <span className="text-zinc-400 text-[10px] block">Payment Mode</span>
-                        <span className="font-semibold text-zinc-800">{selectedReg.paymentMode || "UPI_QR"}</span>
+                        <span className="text-zinc-400 text-[10px] block">
+                          Payment Mode
+                        </span>
+                        <span className="font-semibold text-zinc-800">
+                          {selectedReg.paymentMode || "UPI_QR"}
+                        </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
-                        <span className="text-zinc-400 text-[10px] block">Amount</span>
-                        <span className="font-bold text-zinc-900">₹{selectedReg.amount || "0"}</span>
+                        <span className="text-zinc-400 text-[10px] block">
+                          Amount
+                        </span>
+                        <span className="font-bold text-zinc-900">
+                          ₹{selectedReg.amount || "0"}
+                        </span>
                       </div>
                       <div className="p-2.5 rounded-xl bg-white border border-zinc-200">
-                        <span className="text-zinc-400 text-[10px] block">Pass Status</span>
+                        <span className="text-zinc-400 text-[10px] block">
+                          Pass Status
+                        </span>
                         <span
                           className={`font-bold ${
                             selectedReg.verified
                               ? "text-emerald-700"
                               : isAttendingRecord(selectedReg)
-                              ? "text-amber-700"
-                              : isPendingRecord(selectedReg)
-                              ? "text-rose-700"
-                              : "text-zinc-500"
+                                ? "text-amber-700"
+                                : isPendingRecord(selectedReg)
+                                  ? "text-rose-700"
+                                  : "text-zinc-500"
                           }`}
                         >
                           {selectedReg.verified
                             ? "Active (Verified)"
                             : isAttendingRecord(selectedReg)
-                            ? "Pending Verification"
-                            : isPendingRecord(selectedReg)
-                            ? "Payment Proof Not Uploaded"
-                            : "Non-Attending (Free)"}
+                              ? "Pending Verification"
+                              : isPendingRecord(selectedReg)
+                                ? "Payment Proof Not Uploaded"
+                                : "Non-Attending (Free)"}
                         </span>
                       </div>
                     </div>
@@ -1273,27 +1472,37 @@ export default function AdminRegistrationsPage() {
                             <span>Pending: Payment Proof Not Uploaded</span>
                           </div>
                           <p className="text-[11px] text-rose-700">
-                            Selected ₹1,000 Meet pass, but closed the website before submitting UPI Txn ID or screenshot.
+                            Selected ₹1,000 Meet pass, but closed the website
+                            before submitting UPI Txn ID or screenshot.
                             {selectedReg.lastPaymentReminderSentAt && (
                               <span className="block text-[10px] text-rose-600 font-medium mt-0.5">
-                                Last reminder dispatched: {new Date(selectedReg.lastPaymentReminderSentAt).toLocaleString()}
+                                Last reminder dispatched:{" "}
+                                {new Date(
+                                  selectedReg.lastPaymentReminderSentAt,
+                                ).toLocaleString()}
                               </span>
                             )}
                           </p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => handleSendSingleReminder(selectedReg.id)}
-                          disabled={actionLoading === `reminder-${selectedReg.id}`}
+                          onClick={() =>
+                            handleSendSingleReminder(selectedReg.id)
+                          }
+                          disabled={
+                            actionLoading === `reminder-${selectedReg.id}`
+                          }
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shrink-0 disabled:opacity-50"
                         >
                           {actionLoading === `reminder-${selectedReg.id}` ? (
                             <>
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />{" "}
+                              Sending...
                             </>
                           ) : (
                             <>
-                              <Mail className="w-3.5 h-3.5" /> Send Reminder Email
+                              <Mail className="w-3.5 h-3.5" /> Send Reminder
+                              Email
                             </>
                           )}
                         </button>
@@ -1304,7 +1513,11 @@ export default function AdminRegistrationsPage() {
                     {selectedReg.screenshotUrl ? (
                       <div className="pt-2 flex items-center gap-3">
                         <div
-                          onClick={() => setPreviewScreenshotUrl(selectedReg.screenshotUrl || null)}
+                          onClick={() =>
+                            setPreviewScreenshotUrl(
+                              selectedReg.screenshotUrl || null,
+                            )
+                          }
                           className="relative w-20 h-20 rounded-xl overflow-hidden border border-zinc-300 bg-zinc-100 cursor-pointer hover:opacity-90 transition-opacity"
                         >
                           <img
@@ -1316,18 +1529,26 @@ export default function AdminRegistrationsPage() {
                         <div className="text-xs space-y-1">
                           <button
                             type="button"
-                            onClick={() => setPreviewScreenshotUrl(selectedReg.screenshotUrl || null)}
+                            onClick={() =>
+                              setPreviewScreenshotUrl(
+                                selectedReg.screenshotUrl || null,
+                              )
+                            }
                             className="inline-flex items-center gap-1.5 font-semibold text-orange-700 hover:underline"
                           >
-                            <Camera className="w-3.5 h-3.5" /> View Full Payment Screenshot
+                            <Camera className="w-3.5 h-3.5" /> View Full Payment
+                            Screenshot
                           </button>
                           <p className="text-[11px] text-zinc-400">
-                            Click to inspect UPI transaction details and receipt.
+                            Click to inspect UPI transaction details and
+                            receipt.
                           </p>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-400 italic">No payment screenshot uploaded.</p>
+                      <p className="text-xs text-zinc-400 italic">
+                        No payment screenshot uploaded.
+                      </p>
                     )}
                   </div>
 
@@ -1335,32 +1556,44 @@ export default function AdminRegistrationsPage() {
                   <div className="bg-amber-50/70 rounded-2xl border border-amber-200 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-amber-950 uppercase tracking-wider flex items-center gap-1.5">
-                        <Music className="w-3.5 h-3.5 text-amber-600" /> Stage Performance Request
+                        <Music className="w-3.5 h-3.5 text-amber-600" /> Stage
+                        Performance Request
                       </span>
                       <span
                         className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                           selectedReg.performanceStatus === "approved"
                             ? "bg-emerald-600 text-white"
                             : selectedReg.performanceStatus === "rejected"
-                            ? "bg-rose-600 text-white"
-                            : "bg-amber-200 text-amber-900"
+                              ? "bg-rose-600 text-white"
+                              : "bg-amber-200 text-amber-900"
                         }`}
                       >
-                        Status: {selectedReg.performanceStatus || (selectedReg.wantToPerform ? "Pending" : "None")}
+                        Status:{" "}
+                        {selectedReg.performanceStatus ||
+                          (selectedReg.wantToPerform ? "Pending" : "None")}
                       </span>
                     </div>
 
-                    {selectedReg.wantToPerform || selectedReg.performanceType ? (
+                    {selectedReg.wantToPerform ||
+                    selectedReg.performanceType ? (
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded-xl border border-amber-200 text-xs space-y-1">
                           <div>
-                            <span className="text-zinc-400">Proposed Performance:</span>{" "}
-                            <strong className="text-zinc-900">{selectedReg.performanceType || "Not specified"}</strong>
+                            <span className="text-zinc-400">
+                              Proposed Performance:
+                            </span>{" "}
+                            <strong className="text-zinc-900">
+                              {selectedReg.performanceType || "Not specified"}
+                            </strong>
                           </div>
                           {selectedReg.performanceAdminRemarks && (
                             <div>
-                              <span className="text-zinc-400">Admin Remarks:</span>{" "}
-                              <span className="text-zinc-700">{selectedReg.performanceAdminRemarks}</span>
+                              <span className="text-zinc-400">
+                                Admin Remarks:
+                              </span>{" "}
+                              <span className="text-zinc-700">
+                                {selectedReg.performanceAdminRemarks}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -1368,30 +1601,50 @@ export default function AdminRegistrationsPage() {
                         {/* Action Buttons for Stage */}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
-                            onClick={() => handlePerformanceDecision("approved", "Approved by Admin")}
+                            onClick={() =>
+                              handlePerformanceDecision(
+                                "approved",
+                                "Approved by Admin",
+                              )
+                            }
                             disabled={actionLoading === "perf-approved"}
                             className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "perf-approved" ? "Updating..." : "Approve for Stage"}
+                            {actionLoading === "perf-approved"
+                              ? "Updating..."
+                              : "Approve for Stage"}
                           </button>
                           <button
-                            onClick={() => handlePerformanceDecision("rejected", "Slots full / not approved")}
+                            onClick={() =>
+                              handlePerformanceDecision(
+                                "rejected",
+                                "Slots full / not approved",
+                              )
+                            }
                             disabled={actionLoading === "perf-rejected"}
                             className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-2xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "perf-rejected" ? "Updating..." : "Reject Performance"}
+                            {actionLoading === "perf-rejected"
+                              ? "Updating..."
+                              : "Reject Performance"}
                           </button>
                           <button
-                            onClick={() => handlePerformanceDecision("pending", "")}
+                            onClick={() =>
+                              handlePerformanceDecision("pending", "")
+                            }
                             disabled={actionLoading === "perf-pending"}
                             className="px-3.5 py-1.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 text-zinc-700 font-semibold text-xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "perf-pending" ? "Resetting..." : "Revoke / Reset Status"}
+                            {actionLoading === "perf-pending"
+                              ? "Resetting..."
+                              : "Revoke / Reset Status"}
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">Alumnus did not request to perform on stage.</p>
+                      <p className="text-xs text-zinc-500">
+                        Alumnus did not request to perform on stage.
+                      </p>
                     )}
                   </div>
 
@@ -1399,47 +1652,63 @@ export default function AdminRegistrationsPage() {
                   <div className="bg-blue-50/70 rounded-2xl border border-blue-200 p-4 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-blue-950 uppercase tracking-wider flex items-center gap-1.5">
-                        <HeartHandshake className="w-3.5 h-3.5 text-blue-600" /> Vice Chancellor Meeting Request
+                        <HeartHandshake className="w-3.5 h-3.5 text-blue-600" />{" "}
+                        Vice Chancellor Meeting Request
                       </span>
                       <span
                         className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                           selectedReg.vcInteractionStatus === "approved"
                             ? "bg-emerald-600 text-white"
                             : selectedReg.vcInteractionStatus === "rejected"
-                            ? "bg-rose-600 text-white"
-                            : "bg-blue-200 text-blue-900"
+                              ? "bg-rose-600 text-white"
+                              : "bg-blue-200 text-blue-900"
                         }`}
                       >
-                        Status: {selectedReg.vcInteractionStatus || (selectedReg.wantToInteractWithVC ? "Pending" : "None")}
+                        Status:{" "}
+                        {selectedReg.vcInteractionStatus ||
+                          (selectedReg.wantToInteractWithVC
+                            ? "Pending"
+                            : "None")}
                       </span>
                     </div>
 
-                    {selectedReg.wantToInteractWithVC || selectedReg.vcInteractionReason ? (
+                    {selectedReg.wantToInteractWithVC ||
+                    selectedReg.vcInteractionReason ? (
                       <div className="space-y-3">
                         <div className="bg-white p-3 rounded-xl border border-blue-200 text-xs space-y-1.5">
                           {selectedReg.vcInteractionPortfolio && (
                             <div>
-                              <span className="text-zinc-400">Portfolio / LinkedIn:</span>{" "}
+                              <span className="text-zinc-400">
+                                Portfolio / LinkedIn:
+                              </span>{" "}
                               <a
                                 href={selectedReg.vcInteractionPortfolio}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="text-blue-700 hover:underline font-mono inline-flex items-center gap-1"
                               >
-                                {selectedReg.vcInteractionPortfolio} <ExternalLink className="w-3 h-3" />
+                                {selectedReg.vcInteractionPortfolio}{" "}
+                                <ExternalLink className="w-3 h-3" />
                               </a>
                             </div>
                           )}
                           <div>
-                            <span className="text-zinc-400">Discussion Topic / Reason:</span>
+                            <span className="text-zinc-400">
+                              Discussion Topic / Reason:
+                            </span>
                             <p className="text-zinc-800 mt-0.5 font-medium leading-relaxed">
-                              {selectedReg.vcInteractionReason || "No topic provided"}
+                              {selectedReg.vcInteractionReason ||
+                                "No topic provided"}
                             </p>
                           </div>
                           {selectedReg.vcInteractionAdminRemarks && (
                             <div>
-                              <span className="text-zinc-400">Admin Remarks:</span>{" "}
-                              <span className="text-zinc-700">{selectedReg.vcInteractionAdminRemarks}</span>
+                              <span className="text-zinc-400">
+                                Admin Remarks:
+                              </span>{" "}
+                              <span className="text-zinc-700">
+                                {selectedReg.vcInteractionAdminRemarks}
+                              </span>
                             </div>
                           )}
                         </div>
@@ -1447,30 +1716,49 @@ export default function AdminRegistrationsPage() {
                         {/* Action Buttons for VC Interaction */}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
-                            onClick={() => handleVCDecision("approved", "Approved by VC office")}
+                            onClick={() =>
+                              handleVCDecision(
+                                "approved",
+                                "Approved by VC office",
+                              )
+                            }
                             disabled={actionLoading === "vc-approved"}
                             className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-2xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "vc-approved" ? "Updating..." : "Approve VC Meeting"}
+                            {actionLoading === "vc-approved"
+                              ? "Updating..."
+                              : "Approve VC Meeting"}
                           </button>
                           <button
-                            onClick={() => handleVCDecision("rejected", "Time constraint / not approved")}
+                            onClick={() =>
+                              handleVCDecision(
+                                "rejected",
+                                "Time constraint / not approved",
+                              )
+                            }
                             disabled={actionLoading === "vc-rejected"}
                             className="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-2xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "vc-rejected" ? "Updating..." : "Reject Meeting"}
+                            {actionLoading === "vc-rejected"
+                              ? "Updating..."
+                              : "Reject Meeting"}
                           </button>
                           <button
                             onClick={() => handleVCDecision("pending", "")}
                             disabled={actionLoading === "vc-pending"}
                             className="px-3.5 py-1.5 rounded-xl bg-zinc-200 hover:bg-zinc-300 text-zinc-700 font-semibold text-xs transition-colors disabled:opacity-50"
                           >
-                            {actionLoading === "vc-pending" ? "Resetting..." : "Revoke / Reset Status"}
+                            {actionLoading === "vc-pending"
+                              ? "Resetting..."
+                              : "Revoke / Reset Status"}
                           </button>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-zinc-500">Alumnus did not request interaction with the Vice Chancellor.</p>
+                      <p className="text-xs text-zinc-500">
+                        Alumnus did not request interaction with the Vice
+                        Chancellor.
+                      </p>
                     )}
                   </div>
 
@@ -1482,7 +1770,8 @@ export default function AdminRegistrationsPage() {
                       target="_blank"
                       className="font-semibold text-orange-700 hover:underline inline-flex items-center gap-1"
                     >
-                      Open Live Pass (/sanjh-2026/pass/{selectedReg.id}) <ExternalLink className="w-3.5 h-3.5" />
+                      Open Live Pass (/sanjh-2026/pass/{selectedReg.id}){" "}
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </Link>
                   </div>
                 </>
@@ -1490,115 +1779,178 @@ export default function AdminRegistrationsPage() {
                 /* EDIT MODE: EDIT ANY FIELD DIRECTLY */
                 <div className="space-y-4">
                   <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 font-medium">
-                    You are in <strong>Admin Edit Mode</strong>. You can modify any registration field below and click <strong>Save Changes</strong> to write directly to Firestore.
+                    You are in <strong>Admin Edit Mode</strong>. You can modify
+                    any registration field below and click{" "}
+                    <strong>Save Changes</strong> to write directly to
+                    Firestore.
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Full Name</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Full Name
+                      </label>
                       <input
                         type="text"
                         value={editForm.fullName || ""}
-                        onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, fullName: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Email</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Email
+                      </label>
                       <input
                         type="email"
                         value={editForm.email || ""}
-                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, email: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Phone</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Phone
+                      </label>
                       <input
                         type="text"
                         value={editForm.phone || ""}
-                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, phone: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">WhatsApp</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        WhatsApp
+                      </label>
                       <input
                         type="text"
                         value={editForm.whatsapp || ""}
-                        onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, whatsapp: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Degree</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Degree
+                      </label>
                       <input
                         type="text"
                         value={editForm.degree || ""}
-                        onChange={(e) => setEditForm({ ...editForm, degree: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, degree: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Branch</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Branch
+                      </label>
                       <input
                         type="text"
                         value={editForm.branch || ""}
-                        onChange={(e) => setEditForm({ ...editForm, branch: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, branch: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Passing Year</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Passing Year
+                      </label>
                       <input
                         type="text"
                         value={editForm.passingYear || ""}
-                        onChange={(e) => setEditForm({ ...editForm, passingYear: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            passingYear: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Roll Number</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Roll Number
+                      </label>
                       <input
                         type="text"
                         value={editForm.rollNumber || ""}
-                        onChange={(e) => setEditForm({ ...editForm, rollNumber: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            rollNumber: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Designation</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Designation
+                      </label>
                       <input
                         type="text"
                         value={editForm.currentDesignation || ""}
-                        onChange={(e) => setEditForm({ ...editForm, currentDesignation: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            currentDesignation: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Organization</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Organization
+                      </label>
                       <input
                         type="text"
                         value={editForm.organization || ""}
-                        onChange={(e) => setEditForm({ ...editForm, organization: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            organization: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">City</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        City
+                      </label>
                       <input
                         type="text"
                         value={editForm.city || ""}
-                        onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, city: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">State</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        State
+                      </label>
                       <input
                         type="text"
                         value={editForm.state || ""}
-                        onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, state: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-orange-500"
                       />
                     </div>
@@ -1607,11 +1959,16 @@ export default function AdminRegistrationsPage() {
                   {/* Attendance Status Edit */}
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-3 text-xs">
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Attendance Status</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Attendance Status
+                      </label>
                       <select
                         value={editForm.attendanceType || "non-attending"}
                         onChange={(e) => {
-                          const val = e.target.value as "pending" | "non-attending" | "attending";
+                          const val = e.target.value as
+                            | "pending"
+                            | "non-attending"
+                            | "attending";
                           setEditForm({
                             ...editForm,
                             attendanceType: val,
@@ -1621,25 +1978,45 @@ export default function AdminRegistrationsPage() {
                         }}
                         className="w-full sm:w-auto px-3 py-1.5 rounded-xl border border-zinc-300 font-semibold text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
                       >
-                        <option value="attending">Attending (₹1,000 - Proof Uploaded / Pass Active)</option>
-                        <option value="pending">Pending (₹1,000 - Proof Not Uploaded)</option>
-                        <option value="non-attending">Non-Attending (Directory Only, Free)</option>
+                        <option value="attending">
+                          Attending (₹1,000 - Proof Uploaded / Pass Active)
+                        </option>
+                        <option value="pending">
+                          Pending (₹1,000 - Proof Not Uploaded)
+                        </option>
+                        <option value="non-attending">
+                          Non-Attending (Directory Only, Free)
+                        </option>
                       </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <div>
-                        <label className="block text-zinc-500 font-medium mb-0.5">Guest 1 Name</label>
+                        <label className="block text-zinc-500 font-medium mb-0.5">
+                          Guest 1 Name
+                        </label>
                         <input
                           type="text"
                           value={editForm.guest1Name || ""}
-                          onChange={(e) => setEditForm({ ...editForm, guest1Name: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              guest1Name: e.target.value,
+                            })
+                          }
                           className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300"
                         />
-                        <label className="block text-zinc-500 font-medium mt-1 mb-0.5">Relation</label>
+                        <label className="block text-zinc-500 font-medium mt-1 mb-0.5">
+                          Relation
+                        </label>
                         <select
                           value={editForm.guest1Relation || ""}
-                          onChange={(e) => setEditForm({ ...editForm, guest1Relation: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              guest1Relation: e.target.value,
+                            })
+                          }
                           className="w-full px-2 py-1 rounded-lg border border-zinc-300"
                         >
                           <option value="">Select Relation</option>
@@ -1651,17 +2028,31 @@ export default function AdminRegistrationsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-zinc-500 font-medium mb-0.5">Guest 2 Name</label>
+                        <label className="block text-zinc-500 font-medium mb-0.5">
+                          Guest 2 Name
+                        </label>
                         <input
                           type="text"
                           value={editForm.guest2Name || ""}
-                          onChange={(e) => setEditForm({ ...editForm, guest2Name: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              guest2Name: e.target.value,
+                            })
+                          }
                           className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300"
                         />
-                        <label className="block text-zinc-500 font-medium mt-1 mb-0.5">Relation</label>
+                        <label className="block text-zinc-500 font-medium mt-1 mb-0.5">
+                          Relation
+                        </label>
                         <select
                           value={editForm.guest2Relation || ""}
-                          onChange={(e) => setEditForm({ ...editForm, guest2Relation: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              guest2Relation: e.target.value,
+                            })
+                          }
                           className="w-full px-2 py-1 rounded-lg border border-zinc-300"
                         >
                           <option value="">Select Relation</option>
@@ -1673,17 +2064,31 @@ export default function AdminRegistrationsPage() {
                       </div>
 
                       <div>
-                        <label className="block text-zinc-500 font-medium mb-0.5">Guest 3 Name</label>
+                        <label className="block text-zinc-500 font-medium mb-0.5">
+                          Guest 3 Name
+                        </label>
                         <input
                           type="text"
                           value={editForm.guest3Name || ""}
-                          onChange={(e) => setEditForm({ ...editForm, guest3Name: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              guest3Name: e.target.value,
+                            })
+                          }
                           className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300"
                         />
-                        <label className="block text-zinc-500 font-medium mt-1 mb-0.5">Relation</label>
+                        <label className="block text-zinc-500 font-medium mt-1 mb-0.5">
+                          Relation
+                        </label>
                         <select
                           value={editForm.guest3Relation || ""}
-                          onChange={(e) => setEditForm({ ...editForm, guest3Relation: e.target.value })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              guest3Relation: e.target.value,
+                            })
+                          }
                           className="w-full px-2 py-1 rounded-lg border border-zinc-300"
                         >
                           <option value="">Select Relation</option>
@@ -1704,7 +2109,12 @@ export default function AdminRegistrationsPage() {
                     <input
                       type="text"
                       value={editForm.specialRequest || ""}
-                      onChange={(e) => setEditForm({ ...editForm, specialRequest: e.target.value })}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          specialRequest: e.target.value,
+                        })
+                      }
                       placeholder="Special assistance, accommodations, etc."
                       className="w-full px-3 py-2 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                     />
@@ -1717,7 +2127,12 @@ export default function AdminRegistrationsPage() {
                         <input
                           type="checkbox"
                           checked={Boolean(editForm.wantToPerform)}
-                          onChange={(e) => setEditForm({ ...editForm, wantToPerform: e.target.checked })}
+                          onChange={(e) =>
+                            setEditForm({
+                              ...editForm,
+                              wantToPerform: e.target.checked,
+                            })
+                          }
                           className="rounded text-amber-600"
                         />
                         Wants Stage Performance
@@ -1725,7 +2140,12 @@ export default function AdminRegistrationsPage() {
                       <input
                         type="text"
                         value={editForm.performanceType || ""}
-                        onChange={(e) => setEditForm({ ...editForm, performanceType: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            performanceType: e.target.value,
+                          })
+                        }
                         placeholder="Performance Type (e.g. Singing, Speech, Poetry)"
                         className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300"
                       />
@@ -1737,7 +2157,10 @@ export default function AdminRegistrationsPage() {
                           type="checkbox"
                           checked={Boolean(editForm.wantToInteractWithVC)}
                           onChange={(e) =>
-                            setEditForm({ ...editForm, wantToInteractWithVC: e.target.checked })
+                            setEditForm({
+                              ...editForm,
+                              wantToInteractWithVC: e.target.checked,
+                            })
                           }
                           className="rounded text-blue-600"
                         />
@@ -1747,7 +2170,10 @@ export default function AdminRegistrationsPage() {
                         type="text"
                         value={editForm.vcInteractionPortfolio || ""}
                         onChange={(e) =>
-                          setEditForm({ ...editForm, vcInteractionPortfolio: e.target.value })
+                          setEditForm({
+                            ...editForm,
+                            vcInteractionPortfolio: e.target.value,
+                          })
                         }
                         placeholder="Portfolio / LinkedIn Link"
                         className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300"
@@ -1756,7 +2182,10 @@ export default function AdminRegistrationsPage() {
                         type="text"
                         value={editForm.vcInteractionReason || ""}
                         onChange={(e) =>
-                          setEditForm({ ...editForm, vcInteractionReason: e.target.value })
+                          setEditForm({
+                            ...editForm,
+                            vcInteractionReason: e.target.value,
+                          })
                         }
                         placeholder="Reason / Topic for Discussion"
                         className="w-full px-2.5 py-1.5 rounded-lg border border-zinc-300"
@@ -1767,20 +2196,31 @@ export default function AdminRegistrationsPage() {
                   {/* UPI QR Txn ID Edit */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Transaction ID (Txn ID)</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Transaction ID (Txn ID)
+                      </label>
                       <input
                         type="text"
                         value={editForm.txnId || ""}
-                        onChange={(e) => setEditForm({ ...editForm, txnId: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, txnId: e.target.value })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300 font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-zinc-600 font-semibold mb-1">Payment Mode</label>
+                      <label className="block text-zinc-600 font-semibold mb-1">
+                        Payment Mode
+                      </label>
                       <input
                         type="text"
                         value={editForm.paymentMode || ""}
-                        onChange={(e) => setEditForm({ ...editForm, paymentMode: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({
+                            ...editForm,
+                            paymentMode: e.target.value,
+                          })
+                        }
                         className="w-full px-3 py-2 rounded-xl border border-zinc-300"
                       />
                     </div>
@@ -1803,7 +2243,8 @@ export default function AdminRegistrationsPage() {
                     >
                       {savingEdit ? (
                         <>
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving to Firestore...
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />{" "}
+                          Saving to Firestore...
                         </>
                       ) : (
                         <>
@@ -1819,7 +2260,10 @@ export default function AdminRegistrationsPage() {
             {/* Modal Footer */}
             <div className="p-4 border-t border-zinc-200 bg-zinc-50 flex items-center justify-between text-xs shrink-0">
               <span className="text-zinc-400">
-                Created: {selectedReg.createdAt ? new Date(selectedReg.createdAt).toLocaleString() : "—"}
+                Created:{" "}
+                {selectedReg.createdAt
+                  ? new Date(selectedReg.createdAt).toLocaleString()
+                  : "—"}
               </span>
               <button
                 onClick={handleCloseDetail}
@@ -1843,7 +2287,9 @@ export default function AdminRegistrationsPage() {
             className="bg-white rounded-2xl max-w-2xl w-full p-4 space-y-3 overflow-hidden shadow-2xl"
           >
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-sm text-zinc-900">Payment Screenshot</h3>
+              <h3 className="font-bold text-sm text-zinc-900">
+                Payment Screenshot
+              </h3>
               <button
                 onClick={() => setPreviewScreenshotUrl(null)}
                 className="p-1 rounded-lg hover:bg-zinc-100 text-zinc-500"
@@ -1865,7 +2311,8 @@ export default function AdminRegistrationsPage() {
                 rel="noreferrer"
                 className="text-xs font-semibold text-orange-700 hover:underline inline-flex items-center gap-1"
               >
-                Open Original in New Tab <ExternalLink className="w-3.5 h-3.5" />
+                Open Original in New Tab{" "}
+                <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           </div>
@@ -1889,17 +2336,27 @@ export default function AdminRegistrationsPage() {
                   <strong className="text-rose-700">
                     {counts.pendingCount} alumni
                   </strong>{" "}
-                  marked as <span className="font-semibold text-zinc-900">Pending</span>.
+                  marked as{" "}
+                  <span className="font-semibold text-zinc-900">Pending</span>.
                 </p>
               </div>
             </div>
 
             <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-xs text-zinc-600 space-y-1.5">
-              <p className="font-semibold text-zinc-800">What this email contains:</p>
+              <p className="font-semibold text-zinc-800">
+                What this email contains:
+              </p>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-zinc-500">
-                <li>Direct link to their unique payment & screenshot upload page</li>
-                <li>Instructions on how to submit UPI ID & proof if already paid</li>
-                <li>Clarification that without proof, they will be treated as registered for the directory only</li>
+                <li>
+                  Direct link to their unique payment & screenshot upload page
+                </li>
+                <li>
+                  Instructions on how to submit UPI ID & proof if already paid
+                </li>
+                <li>
+                  Clarification that without proof, they will be treated as
+                  registered for the directory only
+                </li>
               </ul>
             </div>
 
@@ -1920,7 +2377,8 @@ export default function AdminRegistrationsPage() {
               >
                 {bulkEmailLoading ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Dispatching Emails...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Dispatching
+                    Emails...
                   </>
                 ) : (
                   <>
