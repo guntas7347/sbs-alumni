@@ -79,10 +79,10 @@ export default function AdminTransactionsPage() {
     return { duplicateTxnMap: dupes, duplicateRecordsCount: totalDupeRecords };
   }, [registrations]);
 
-  // Filter transactions: only registrations that have transaction info or are attending
+  // Filter transactions: only registrations where payment proof was uploaded or verified
   const transactionsList = useMemo(() => {
     return registrations.filter(
-      (r) => r.txnId || r.amount === "1000" || r.attendingMeet !== false || r.screenshotUrl
+      (r) => Boolean(r.verified || (r.txnId && r.txnId.trim()) || (r.screenshotUrl && r.screenshotUrl.trim()))
     );
   }, [registrations]);
 

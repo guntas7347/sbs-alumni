@@ -26,6 +26,7 @@ import {
   Check,
   Eye,
   Camera,
+  AlertTriangle,
 } from "lucide-react";
 import { extractText } from "@/lib/ocr";
 import { generateUpiQR, isValidUpiTransactionId } from "@/lib/upi";
@@ -446,6 +447,26 @@ export default function PaymentClient({
         </div>
       )}
 
+      {/* CRITICAL ATTENTION BANNER ABOVE PAYMENT SECTION */}
+      <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-rose-500 via-rose-600 to-orange-600 text-white shadow-md border-2 border-rose-300 space-y-2 animate-in fade-in">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-200 shrink-0" />
+          <h2 className="text-sm sm:text-base font-black uppercase tracking-wide text-white">
+            IMPORTANT: Upload Payment Screenshot Below Or You Will Not Be Issued
+            a Pass!
+          </h2>
+        </div>
+        <p className="text-xs sm:text-sm text-rose-50 leading-relaxed font-medium">
+          Simply paying via UPI QR is <strong>NOT</strong> enough. If you close
+          this page without uploading your payment screenshot and Transaction ID
+          below, your registration will{" "}
+          <strong>
+            ONLY be recorded as basic directory registration (NOT ATTENDING)
+          </strong>{" "}
+          and you will <strong>NOT</strong> receive an Event Pass!
+        </p>
+      </div>
+
       {/* Main Grid: Left Side QR & Instructions, Right Side Form */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Side: UPI QR Code & Instructions (5 cols) */}
@@ -476,6 +497,20 @@ export default function PaymentClient({
                 Pay with UPI <ExternalLink className="w-3 h-3" />
               </a>
             )}
+
+            <button
+              onClick={() => {
+                const formElement = document.getElementById("paymentForm");
+                if (formElement) {
+                  formElement.scrollIntoView({
+                    behavior: "smooth",
+                  });
+                }
+              }}
+              className="text-xs md:hidden mx-auto  text-orange-600 bg-orange-50 px-4 py-2 rounded-lg hover:bg-orange-100 hover:text-orange-700 font-bold flex items-center gap-1.5 justify-center"
+            >
+              Upload Payment Screenshot
+            </button>
 
             <div className="space-y-1">
               <div className="text-xs uppercase tracking-wider text-zinc-500 font-bold">
@@ -581,7 +616,10 @@ export default function PaymentClient({
           </div>
 
           {/* Form Card */}
-          <div className="bg-white rounded-3xl border border-orange-200 p-6 sm:p-7 shadow-xs space-y-6">
+          <div
+            id="paymentForm"
+            className="bg-white rounded-3xl border border-orange-200 p-6 sm:p-7 shadow-xs space-y-6"
+          >
             <div className="border-b border-zinc-100 pb-4">
               <h2 className="text-lg font-extrabold text-zinc-900">
                 Submit Payment Verification Details
@@ -589,23 +627,6 @@ export default function PaymentClient({
               <p className="text-xs text-zinc-500 mt-1">
                 All fields are required. Please double check that your
                 transaction ID matches your screenshot.
-              </p>
-            </div>
-
-            {/* MANDATORY WARNING ALERT BANNER */}
-            <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold text-xs text-amber-900">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>CRITICAL VERIFICATION REQUIREMENT</span>
-              </div>
-              <p className="text-xs leading-relaxed text-amber-900 font-medium">
-                Make sure your payment screenshot{" "}
-                <strong>
-                  clearly displays the Transaction ID (UTR / Reference number)
-                </strong>
-                , amount (₹1,000), and payment timestamp. Screenshots without a
-                visible Transaction ID will be rejected during admin
-                verification.
               </p>
             </div>
 

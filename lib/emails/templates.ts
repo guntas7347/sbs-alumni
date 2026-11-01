@@ -487,3 +487,143 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
 
   return { subject, html, text };
 }
+
+/**
+ * 4. Email template sent to in-person-pending alumni reminding them to upload payment screenshot
+ */
+export function getPaymentProofReminderEmailTemplate(
+  registration: AlumniRegistration,
+): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const paymentLink = `${APP_URL}/sanjh-2026/payment/${registration.id}`;
+  const subject = `Action Required: Upload Payment Proof for Sanjh 2026 Event Pass (${registration.regNumber})`;
+
+  const text = `Dear ${registration.fullName},
+
+Thank you for registering for the 1st Alumni Meet & Sanjh 2026 at Shaheed Bhagat Singh State University (SBSSU), Ferozepur.
+
+We noticed that you opted to attend in person (₹1,000 Event Pass), but our records show that you have NOT uploaded your payment screenshot and UPI Transaction ID yet.
+
+IMPORTANT INSTRUCTIONS:
+1. If you already paid at the UPI QR code:
+Please visit the link below immediately and upload your payment screenshot along with your UPI Transaction ID (UTR Number). Without this screenshot, our finance team cannot verify your payment or issue your official Event Pass.
+
+2. If you have not paid yet:
+You can scan the official SBSSU UPI QR code at the link below and complete your ₹1,000 pass fee.
+
+3. Action Required:
+If you do not upload payment proof, your entry will be treated as basic directory registration only (NOT attending), and no event pass will be issued.
+
+Upload your payment proof here:
+${paymentLink}
+
+Warm regards,
+Shaheed Bhagat Singh State University Alumni Association
+Ferozepur, Punjab | alumni.sbssu.ac.in
+`;
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #fafafa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #18181b;">
+  <table role="presentation" width="100%" style="background-color: #fafafa; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; border: 2px solid #f87171; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+          <!-- Urgent Warning Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #e11d48 0%, #ea580c 100%); padding: 28px 24px; text-align: center; color: #ffffff;">
+              <div style="font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: #fecdd3; margin-bottom: 6px;">
+                Shaheed Bhagat Singh State University
+              </div>
+              <h1 style="margin: 0; font-size: 22px; font-weight: 900; line-height: 1.3;">
+                Action Required: Upload Payment Proof
+              </h1>
+              <p style="margin: 6px 0 0; font-size: 13px; color: #ffe4e6;">
+                Sanjh 2026 Alumni Meet Pass • Reg #${registration.regNumber}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 28px 24px;">
+              <p style="font-size: 14px; margin: 0 0 16px;">
+                Dear <strong>${registration.fullName}</strong>,
+              </p>
+              <p style="font-size: 13px; line-height: 1.6; color: #3f3f46; margin: 0 0 16px;">
+                We noticed that you registered for the <strong>1st Alumni Meet & Sanjh 2026</strong> and selected to <strong>Attend in Person (₹1,000 Event Pass)</strong>, but our records indicate you have <strong>not uploaded your payment screenshot and Transaction ID</strong> yet.
+              </p>
+
+              <!-- Warning Box -->
+              <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 8px; font-size: 13px; font-weight: 800; color: #9f1239;">
+                  ⚠️ Did you already scan the QR code and pay?
+                </h3>
+                <p style="margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: #be123c;">
+                  Some alumni made the payment at the QR code but accidentally closed the website before uploading the screenshot. If this happened to you, <strong>please upload your payment screenshot right away</strong> so we can verify and issue your pass.
+                </p>
+                <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #9f1239; font-weight: 700;">
+                  If payment proof is not uploaded, your record will be treated as Directory Registration Only (NOT Attending).
+                </p>
+              </div>
+
+              <!-- Registration Summary -->
+              <table role="presentation" width="100%" style="background-color: #f4f4f5; border-radius: 12px; padding: 14px; font-size: 12px; margin-bottom: 24px;">
+                <tr>
+                  <td style="color: #71717a; padding: 3px 0;">Registration ID:</td>
+                  <td style="font-family: monospace; font-weight: 700; text-align: right; color: #18181b;">${registration.regNumber}</td>
+                </tr>
+                <tr>
+                  <td style="color: #71717a; padding: 3px 0;">Batch & Program:</td>
+                  <td style="font-weight: 600; text-align: right; color: #18181b;">${registration.degree} (${registration.passingYear})</td>
+                </tr>
+                <tr>
+                  <td style="color: #71717a; padding: 3px 0;">Selected Option:</td>
+                  <td style="font-weight: 700; color: #ea580c; text-align: right;">In-Person Meet Pass (₹1,000)</td>
+                </tr>
+                <tr>
+                  <td style="color: #71717a; padding: 3px 0;">Current Pass Status:</td>
+                  <td style="font-weight: 700; color: #e11d48; text-align: right;">● Payment Proof Missing</td>
+                </tr>
+              </table>
+
+              <!-- Action CTA Button -->
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom: 20px;">
+                <tr>
+                  <td align="center">
+                    <a href="${paymentLink}" style="display: inline-block; background-color: #e11d48; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 32px; border-radius: 12px; box-shadow: 0 4px 12px rgba(225,29,72,0.35);">
+                      Upload Payment Proof / Complete Payment →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size: 11px; text-align: center; color: #71717a; margin: 0;">
+                Direct link: <a href="${paymentLink}" style="color: #e11d48;">${paymentLink}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f4f4f5; border-top: 1px solid #e4e4e7; padding: 16px 24px; text-align: center; font-size: 11px; color: #71717a; line-height: 1.5;">
+              Shaheed Bhagat Singh State University Alumni Association<br>
+              Ferozepur – Moga Road, Ferozepur, Punjab 152004 • <a href="https://alumni.sbssu.ac.in" style="color: #ea580c; text-decoration: none;">alumni.sbssu.ac.in</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}

@@ -41,12 +41,29 @@ export async function createAlumniRegistration(
     const regNumber = `SBSSU-ALM-${currentYear}-${randomSuffix}`;
     const now = new Date().toISOString();
 
-    // Determine whether user opted to attend the meet
-    const isAttending = input.attendingMeet !== false && input.attendanceType !== "supporting";
+    // User's attendance selection intent
+    const wantsToAttend =
+      input.attendanceType === "in-person-pending" ||
+      (input.attendingMeet !== false && input.attendanceType !== "supporting");
+
+    // User is ONLY officially marked as attending if payment proof (screenshot & txnId) is uploaded
+    const hasUploadedPayment = Boolean(
+      input.txnId && input.txnId.trim() &&
+      input.screenshotUrl && input.screenshotUrl.trim()
+    );
+
+    // 3 distinct states: "in-person", "in-person-pending", "supporting"
+    const attendanceType: "in-person" | "in-person-pending" | "supporting" = hasUploadedPayment
+      ? "in-person"
+      : wantsToAttend
+      ? "in-person-pending"
+      : "supporting";
+
+    const isAttending = attendanceType === "in-person";
 
     // Validate accompanying guests (max 3, only Mom, Dad, Spouse, Child)
     let validatedGuests: { name: string; relation: "Mom" | "Dad" | "Spouse" | "Child" }[] = [];
-    if (isAttending && input.guests && input.guests.length > 0) {
+    if (wantsToAttend && input.guests && input.guests.length > 0) {
       if (input.guests.length > 3) {
         return {
           success: false,
@@ -92,12 +109,12 @@ export async function createAlumniRegistration(
     const guestCountStr = String(guestListStr.length);
 
     // Stage Performance Request
-    const wantToPerform = Boolean(isAttending && input.wantToPerform);
+    const wantToPerform = Boolean(wantsToAttend && input.wantToPerform);
     const performanceType = wantToPerform ? (input.performanceType?.trim() || "") : "";
     const performanceStatus = wantToPerform ? "pending" : "none";
 
     // Vice Chancellor Interaction Request
-    const wantToInteractWithVC = Boolean(isAttending && input.wantToInteractWithVC);
+    const wantToInteractWithVC = Boolean(wantsToAttend && input.wantToInteractWithVC);
     const vcInteractionPortfolio = wantToInteractWithVC ? (input.vcInteractionPortfolio?.trim() || "") : "";
     const vcInteractionReason = wantToInteractWithVC ? (input.vcInteractionReason?.trim() || "") : "";
     const vcInteractionStatus = wantToInteractWithVC ? "pending" : "none";
@@ -126,10 +143,10 @@ export async function createAlumniRegistration(
 
       regNumber,
       attendingMeet: isAttending,
-      attendanceType: isAttending ? "in-person" : "supporting",
+      attendanceType,
       hasPass: false,
       passStatus: "none",
-      amount: isAttending ? "1000" : "0",
+      amount: wantsToAttend ? "1000" : "0",
 
       specialRequest,
 
@@ -202,6 +219,72 @@ export async function createAlumniRegistration(
   }
 }
 
+/**
+ * Normalizes an alumni record from Firestore into 3 distinct attendance states:
+ * 1. "in-person": Chose to attend AND uploaded payment proof (or verified).
+ * 2. "in-person-pending": Chose to attend (₹1,000), but closed website before uploading payment proof.
+ * 3. "supporting": Chose directory registration only (Free).
+ */
+function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration {
+  const hasUploadedPayment = Boolean(
+    data?.verified ||
+    (data?.txnId && String(data.txnId).trim()) ||
+    (data?.screenshotUrl && String(data.screenshotUrl).trim()) ||
+    (data?.paymentScreenshotUrl && String(data.paymentScreenshotUrl).trim()) ||
+    (data?.paymentDetails?.screenshotUrl && String(data.paymentDetails.screenshotUrl).trim())
+  );
+
+  // Check if alumnus originally opted to attend Sanjh 2026
+  const choseToAttend = Boolean(
+    data?.attendanceType === "in-person" ||
+    data?.attendanceType === "in-person-pending" ||
+    data?.attendingMeet === true ||
+    data?.amount === "1000" ||
+    data?.passPrice === 1000 ||
+    (data?.guestCount && data.guestCount !== "0") ||
+    data?.guest1Name
+  );
+
+  const attendanceType: "in-person" | "in-person-pending" | "supporting" = hasUploadedPayment
+    ? "in-person"
+    : choseToAttend
+    ? "in-person-pending"
+    : "supporting";
+
+  const isAttending = attendanceType === "in-person";
+
+  const hasPass = Boolean(
+    data?.hasPass === true ||
+    data?.passStatus === "active" ||
+    data?.paymentStatus === "completed"
+  );
+
+  return {
+    ...data,
+    id,
+    attendingMeet: isAttending,
+    attendanceType,
+    amount: choseToAttend ? "1000" : "0",
+    hasPass,
+    passStatus: data?.passStatus || (hasPass ? "active" : "none"),
+    passPrice: data?.passPrice || 1000,
+    performerStatus: data?.performerStatus || "none",
+    txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
+    paymentMode: data?.paymentMode || data?.paymentDetails?.paymentMethod || (choseToAttend ? "UPI_QR" : ""),
+    verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
+    screenshotUrl:
+      data?.screenshotUrl ||
+      data?.paymentScreenshotUrl ||
+      data?.paymentDetails?.screenshotUrl ||
+      "",
+    paymentScreenshotUrl:
+      data?.paymentScreenshotUrl ||
+      data?.screenshotUrl ||
+      data?.paymentDetails?.screenshotUrl ||
+      "",
+  } as unknown as AlumniRegistration;
+}
+
 export async function getAlumniRegistrationById(
   id: string,
 ): Promise<{ success: boolean; data?: AlumniRegistration; error?: string }> {
@@ -217,34 +300,7 @@ export async function getAlumniRegistrationById(
     const data = docSnap.data();
     return {
       success: true,
-      data: {
-        id: docSnap.id,
-        hasPass: Boolean(
-          data?.hasPass ||
-          data?.passStatus === "active" ||
-          data?.paymentStatus === "completed",
-        ),
-        passStatus:
-          data?.passStatus ||
-          (data?.paymentStatus === "completed" ? "active" : "none"),
-        passPrice: data?.passPrice || 1000,
-        performerStatus: data?.performerStatus || "none",
-        txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
-        paymentMode:
-          data?.paymentMode || data?.paymentDetails?.paymentMethod || "",
-        verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
-        screenshotUrl:
-          data?.screenshotUrl ||
-          data?.paymentScreenshotUrl ||
-          data?.paymentDetails?.screenshotUrl ||
-          "",
-        paymentScreenshotUrl:
-          data?.paymentScreenshotUrl ||
-          data?.screenshotUrl ||
-          data?.paymentDetails?.screenshotUrl ||
-          "",
-        ...data,
-      } as unknown as AlumniRegistration,
+      data: normalizeRegistrationRecord(docSnap.id, data),
     };
   } catch (error: any) {
     console.error("Error fetching registration by ID:", error);
@@ -290,23 +346,9 @@ export async function verifyRegistrationCode(
     try {
       const docSnap = await db.collection(collectionName).doc(code).get();
       if (docSnap.exists) {
-        const data = docSnap.data();
         return {
           success: true,
-          data: {
-            id: docSnap.id,
-            hasPass: Boolean(
-              data?.hasPass ||
-              data?.passStatus === "active" ||
-              data?.paymentStatus === "completed",
-            ),
-            passStatus:
-              data?.passStatus ||
-              (data?.paymentStatus === "completed" ? "active" : "none"),
-            passPrice: data?.passPrice || 1000,
-            performerStatus: data?.performerStatus || "none",
-            ...data,
-          } as unknown as AlumniRegistration,
+          data: normalizeRegistrationRecord(docSnap.id, docSnap.data()),
         };
       }
     } catch {
@@ -323,23 +365,9 @@ export async function verifyRegistrationCode(
 
     if (!querySnapshot.empty) {
       const docSnap = querySnapshot.docs[0];
-      const data = docSnap.data();
       return {
         success: true,
-        data: {
-          id: docSnap.id,
-          hasPass: Boolean(
-            data?.hasPass ||
-            data?.passStatus === "active" ||
-            data?.paymentStatus === "completed",
-          ),
-          passStatus:
-            data?.passStatus ||
-            (data?.paymentStatus === "completed" ? "active" : "none"),
-          passPrice: data?.passPrice || 1000,
-          performerStatus: data?.performerStatus || "none",
-          ...data,
-        } as unknown as AlumniRegistration,
+        data: normalizeRegistrationRecord(docSnap.id, docSnap.data()),
       };
     }
 
@@ -352,23 +380,9 @@ export async function verifyRegistrationCode(
 
     if (!rollSnapshot.empty) {
       const docSnap = rollSnapshot.docs[0];
-      const data = docSnap.data();
       return {
         success: true,
-        data: {
-          id: docSnap.id,
-          hasPass: Boolean(
-            data?.hasPass ||
-            data?.passStatus === "active" ||
-            data?.paymentStatus === "completed",
-          ),
-          passStatus:
-            data?.passStatus ||
-            (data?.paymentStatus === "completed" ? "active" : "none"),
-          passPrice: data?.passPrice || 1000,
-          performerStatus: data?.performerStatus || "none",
-          ...data,
-        } as unknown as AlumniRegistration,
+        data: normalizeRegistrationRecord(docSnap.id, docSnap.data()),
       };
     }
 
@@ -452,23 +466,9 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
     }
 
     const docSnap = querySnapshot.docs[0];
-    const data = docSnap.data();
     return {
       success: true,
-      data: {
-        id: docSnap.id,
-        hasPass: Boolean(
-          data?.hasPass ||
-          data?.passStatus === "active" ||
-          data?.paymentStatus === "completed",
-        ),
-        passStatus:
-          data?.passStatus ||
-          (data?.paymentStatus === "completed" ? "active" : "none"),
-        passPrice: data?.passPrice || 1000,
-        performerStatus: data?.performerStatus || "none",
-        ...data,
-      } as unknown as AlumniRegistration,
+      data: normalizeRegistrationRecord(docSnap.id, docSnap.data()),
     };
   } catch (error: any) {
     console.error("Error fetching registration by email:", error);
@@ -518,12 +518,14 @@ export async function submitUpiPayment({
     const trimmedTxnId = txnId.trim();
 
     await docRef.update({
+      attendingMeet: true,
+      attendanceType: "in-person",
       txnId: trimmedTxnId,
       paymentMode: "UPI_QR",
       verified: false,
       screenshotUrl: screenshotUrl.trim(),
       paymentScreenshotUrl: screenshotUrl.trim(),
-      amount: 1000,
+      amount: "1000",
       paymentStatus: "pending",
       passPrice: 1000,
       hasPass: false,
@@ -543,6 +545,8 @@ export async function submitUpiPayment({
       const updatedReg = {
         ...regData,
         id: registrationId,
+        attendingMeet: true,
+        attendanceType: "in-person",
         txnId: trimmedTxnId,
         paymentMode: "UPI_QR",
         verified: false,
@@ -723,35 +727,7 @@ export async function getAllRegistrations(): Promise<{
 
     const registrations: AlumniRegistration[] = [];
     snapshot.forEach((doc) => {
-      const data = doc.data();
-      registrations.push({
-        id: doc.id,
-        hasPass: Boolean(
-          data?.hasPass ||
-          data?.passStatus === "active" ||
-          data?.paymentStatus === "completed",
-        ),
-        passStatus:
-          data?.passStatus ||
-          (data?.paymentStatus === "completed" ? "active" : "none"),
-        passPrice: data?.passPrice || 1000,
-        performerStatus: data?.performerStatus || "none",
-        txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
-        paymentMode:
-          data?.paymentMode || data?.paymentDetails?.paymentMethod || "",
-        verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
-        screenshotUrl:
-          data?.screenshotUrl ||
-          data?.paymentScreenshotUrl ||
-          data?.paymentDetails?.screenshotUrl ||
-          "",
-        paymentScreenshotUrl:
-          data?.paymentScreenshotUrl ||
-          data?.screenshotUrl ||
-          data?.paymentDetails?.screenshotUrl ||
-          "",
-        ...data,
-      } as unknown as AlumniRegistration);
+      registrations.push(normalizeRegistrationRecord(doc.id, doc.data()));
     });
 
     return { success: true, data: registrations };
@@ -788,6 +764,15 @@ export async function getRegistrationStats(): Promise<{
       const data = doc.data();
       totalRegistered += 1;
 
+      const hasUploadedPayment = Boolean(
+        data?.verified ||
+        (data?.txnId && String(data.txnId).trim()) ||
+        (data?.screenshotUrl && String(data.screenshotUrl).trim()) ||
+        (data?.paymentScreenshotUrl && String(data.paymentScreenshotUrl).trim()) ||
+        (data?.paymentDetails?.screenshotUrl && String(data.paymentDetails.screenshotUrl).trim())
+      );
+      const isAttending = Boolean(data?.attendingMeet && hasUploadedPayment);
+
       const hasPass = Boolean(
         data?.hasPass === true ||
         data?.passStatus === "active" ||
@@ -816,7 +801,7 @@ export async function getRegistrationStats(): Promise<{
         performersApproved += 1;
       }
 
-      if (data.attendanceType === "in-person") {
+      if (isAttending) {
         inPersonAttendees += 1 + Number(data.guestCount || 0);
       }
     });

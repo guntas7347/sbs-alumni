@@ -33,7 +33,7 @@ export interface AlumniRegistration {
 
   // 3. Attendance & Event Pass
   attendingMeet: boolean;
-  attendanceType?: string; // "in-person" | "supporting"
+  attendanceType?: "in-person" | "in-person-pending" | "supporting";
   hasPass: boolean;
   passStatus: string; // "none" | "active" | "cancelled" | "pending"
   amount: string; // "1000" or "0"
@@ -74,6 +74,7 @@ export interface AlumniRegistration {
   verified: boolean;
   verifiedBy?: string;
   verifiedAt?: string;
+  lastPaymentReminderSentAt?: string;
 
   // Legacy field support for backward compatibility if any
   paymentStatus?: string;

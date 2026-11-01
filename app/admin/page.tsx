@@ -9,7 +9,11 @@ import {
   updatePerformanceStatus,
   updateVCInteractionStatus,
 } from "@/lib/actions/alumniActions";
-import { verifyAlumniPayment } from "@/lib/actions/adminActions";
+import {
+  verifyAlumniPayment,
+  sendSinglePaymentProofReminder,
+  sendBulkPaymentProofReminders,
+} from "@/lib/actions/adminActions";
 import type { AlumniRegistration, AllowedGuestRelation } from "@/lib/types";
 import {
   Users,
@@ -27,6 +31,7 @@ import {
   XCircle,
   Sparkles,
   AlertTriangle,
+  AlertCircle,
   FileImage,
   X,
   Check,
@@ -38,6 +43,7 @@ import {
   MapPin,
   Phone,
   Mail,
+  Send,
   User,
   HeartHandshake,
   Mic,
@@ -45,7 +51,13 @@ import {
   RotateCcw,
 } from "lucide-react";
 
-type FilterTab = "all" | "attending" | "free" | "performers" | "vc_interactions";
+type FilterTab =
+  | "all"
+  | "attending"
+  | "in-person-pending"
+  | "free"
+  | "performers"
+  | "vc_interactions";
 
 export default function AdminRegistrationsPage() {
   const [registrations, setRegistrations] = useState<AlumniRegistration[]>([]);
@@ -67,6 +79,16 @@ export default function AdminRegistrationsPage() {
 
   // Full screenshot preview modal
   const [previewScreenshotUrl, setPreviewScreenshotUrl] = useState<string | null>(null);
+
+  // Bulk email reminder state
+  const [bulkEmailLoading, setBulkEmailLoading] = useState(false);
+  const [bulkEmailConfirmOpen, setBulkEmailConfirmOpen] = useState(false);
+  const [bulkEmailResult, setBulkEmailResult] = useState<{
+    success: boolean;
+    sentCount: number;
+    failedCount: number;
+    message: string;
+  } | null>(null);
 
   // Fetch all registrations in one go
   const loadData = () => {
@@ -93,11 +115,101 @@ export default function AdminRegistrationsPage() {
     loadData();
   }, []);
 
+  // 1. "in-person": Chose to attend AND payment proof is uploaded (or verified)
+  const isAttendingRecord = (r: AlumniRegistration) =>
+    r.attendanceType === "in-person" ||
+    Boolean(
+      r.attendingMeet &&
+      (r.verified || (r.txnId && r.txnId.trim()) || (r.screenshotUrl && r.screenshotUrl.trim()))
+    );
+
+  // 2. "in-person-pending": Chose to attend (₹1,000) but payment proof is missing
+  const isInPersonPendingRecord = (r: AlumniRegistration) =>
+    r.attendanceType === "in-person-pending" ||
+    (!isAttendingRecord(r) &&
+      (r.amount === "1000" ||
+        r.passPrice === 1000 ||
+        r.attendingMeet ||
+        (r.guestCount && r.guestCount !== "0") ||
+        Boolean(r.guest1Name)));
+
+  // 3. "supporting": Directory registration only (Free)
+  const isSupportingRecord = (r: AlumniRegistration) =>
+    !isAttendingRecord(r) && !isInPersonPendingRecord(r);
+
+  // Bulk reminder email handler
+  const handleSendBulkReminder = async () => {
+    setBulkEmailLoading(true);
+    setBulkEmailResult(null);
+    try {
+      const pendingIds = registrations
+        .filter((r) => isInPersonPendingRecord(r))
+        .map((r) => r.id);
+
+      const res = await sendBulkPaymentProofReminders(pendingIds);
+      if (res.success) {
+        setBulkEmailResult({
+          success: true,
+          sentCount: res.sentCount,
+          failedCount: res.failedCount,
+          message: `Successfully sent payment reminder emails to ${res.sentCount} alumni!`,
+        });
+        loadData();
+      } else {
+        setBulkEmailResult({
+          success: false,
+          sentCount: res.sentCount,
+          failedCount: res.failedCount,
+          message: res.error || "Failed to send bulk reminder emails.",
+        });
+      }
+      setBulkEmailConfirmOpen(false);
+    } catch (err: any) {
+      setBulkEmailResult({
+        success: false,
+        sentCount: 0,
+        failedCount: 0,
+        message: err?.message || "An unexpected error occurred.",
+      });
+      setBulkEmailConfirmOpen(false);
+    } finally {
+      setBulkEmailLoading(false);
+    }
+  };
+
+  // Single reminder email handler
+  const handleSendSingleReminder = async (id: string) => {
+    setActionLoading(`reminder-${id}`);
+    try {
+      const res = await sendSinglePaymentProofReminder(id);
+      if (res.success) {
+        setModalFeedback({
+          type: "success",
+          text: "Payment proof reminder email dispatched successfully!",
+        });
+        loadData();
+      } else {
+        setModalFeedback({
+          type: "error",
+          text: res.error || "Failed to send reminder email.",
+        });
+      }
+    } catch (err: any) {
+      setModalFeedback({
+        type: "error",
+        text: err?.message || "Failed to send reminder email.",
+      });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Compute category counts
   const counts = useMemo(() => {
     const total = registrations.length;
-    const attendingCount = registrations.filter((r) => r.attendingMeet !== false).length;
-    const freeCount = total - attendingCount;
+    const attendingCount = registrations.filter(isAttendingRecord).length;
+    const inPersonPendingCount = registrations.filter(isInPersonPendingRecord).length;
+    const freeCount = registrations.filter(isSupportingRecord).length;
     const performerCount = registrations.filter(
       (r) =>
         r.wantToPerform ||
@@ -114,6 +226,7 @@ export default function AdminRegistrationsPage() {
     return {
       total,
       attendingCount,
+      inPersonPendingCount,
       freeCount,
       performerCount,
       vcCount,
@@ -126,9 +239,11 @@ export default function AdminRegistrationsPage() {
 
     // Filter by tab
     if (currentTab === "attending") {
-      list = list.filter((r) => r.attendingMeet !== false);
+      list = list.filter(isAttendingRecord);
+    } else if (currentTab === "in-person-pending") {
+      list = list.filter(isInPersonPendingRecord);
     } else if (currentTab === "free") {
-      list = list.filter((r) => r.attendingMeet === false);
+      list = list.filter(isSupportingRecord);
     } else if (currentTab === "performers") {
       list = list.filter(
         (r) =>
@@ -398,7 +513,7 @@ export default function AdminRegistrationsPage() {
       </div>
 
       {/* KPI Stats Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <button
           onClick={() => setCurrentTab("all")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
@@ -424,7 +539,24 @@ export default function AdminRegistrationsPage() {
           <div className="text-xl sm:text-2xl font-black text-emerald-950 mt-0.5">
             {counts.attendingCount}
           </div>
-          <span className="text-[10px] text-emerald-700">₹1,000 passes</span>
+          <span className="text-[10px] text-emerald-700">Proof uploaded / pass</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentTab("in-person-pending")}
+          className={`p-3.5 rounded-2xl border text-left transition-all ${
+            currentTab === "in-person-pending"
+              ? "bg-rose-50/80 border-rose-300 ring-2 ring-rose-400"
+              : "bg-white border-zinc-200 hover:border-zinc-300"
+          }`}
+        >
+          <span className="text-[11px] font-semibold text-rose-800 block flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> In-Person Pending
+          </span>
+          <div className="text-xl sm:text-2xl font-black text-rose-950 mt-0.5">
+            {counts.inPersonPendingCount}
+          </div>
+          <span className="text-[10px] text-rose-700">Proof missing / closed site</span>
         </button>
 
         <button
@@ -473,6 +605,65 @@ export default function AdminRegistrationsPage() {
         </button>
       </div>
 
+      {/* IN-PERSON PENDING BANNER & BULK EMAIL ACTION */}
+      {counts.inPersonPendingCount > 0 && (
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50 to-orange-50 border-2 border-amber-300 text-amber-950 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 mt-0.5">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono text-xs font-black bg-rose-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  {counts.inPersonPendingCount} In-Person Pending
+                </span>
+                <span className="text-xs font-bold text-zinc-800">
+                  Selected ₹1,000 meet pass, but closed website without uploading payment proof
+                </span>
+              </div>
+              <p className="text-xs text-zinc-600 leading-relaxed max-w-2xl">
+                These alumni opted to attend Sanjh 2026 in-person, but have not uploaded their payment screenshot and UPI Transaction ID. They may have paid at the QR code. You can send them a direct email with their personal link to upload their screenshot or be marked as directory registration only.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setBulkEmailConfirmOpen(true)}
+            disabled={bulkEmailLoading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs transition-all shrink-0 disabled:opacity-50"
+          >
+            <Mail className="w-4 h-4" />
+            {bulkEmailLoading ? "Sending Emails..." : `Email All ${counts.inPersonPendingCount} Pending Alumni`}
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Email Result Alert */}
+      {bulkEmailResult && (
+        <div
+          className={`p-4 rounded-2xl text-xs flex items-center justify-between gap-3 shadow-2xs ${
+            bulkEmailResult.success
+              ? "bg-emerald-50 border border-emerald-300 text-emerald-950"
+              : "bg-rose-50 border border-rose-300 text-rose-950"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {bulkEmailResult.success ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            ) : (
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+            )}
+            <span className="font-semibold">{bulkEmailResult.message}</span>
+          </div>
+          <button
+            onClick={() => setBulkEmailResult(null)}
+            className="text-zinc-400 hover:text-zinc-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Search and Filters Bar */}
       <div className="bg-white rounded-2xl border border-zinc-200 p-4 shadow-2xs space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
@@ -519,10 +710,21 @@ export default function AdminRegistrationsPage() {
             className={`px-3 py-1 rounded-lg font-semibold transition-colors ${
               currentTab === "attending"
                 ? "bg-emerald-700 text-white"
-                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
             }`}
           >
             Attending ({counts.attendingCount})
+          </button>
+          <button
+            onClick={() => setCurrentTab("in-person-pending")}
+            className={`px-3 py-1 rounded-lg font-semibold transition-colors flex items-center gap-1 ${
+              currentTab === "in-person-pending"
+                ? "bg-rose-600 text-white"
+                : "bg-rose-50 text-rose-800 hover:bg-rose-100"
+            }`}
+          >
+            <AlertTriangle className="w-3 h-3" />
+            In-Person Pending ({counts.inPersonPendingCount})
           </button>
           <button
             onClick={() => setCurrentTab("free")}
@@ -601,7 +803,7 @@ export default function AdminRegistrationsPage() {
               </thead>
               <tbody className="divide-y divide-zinc-200">
                 {filteredRegistrations.map((reg) => {
-                  const isAttending = reg.attendingMeet !== false;
+                  const isAttending = isAttendingRecord(reg);
                   const isVerified = reg.verified || reg.hasPass || reg.passStatus === "active";
                   const hasStage =
                     reg.wantToPerform ||
@@ -655,6 +857,10 @@ export default function AdminRegistrationsPage() {
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Attending (₹1,000)
                             </span>
+                          ) : isInPersonPendingRecord(reg) ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-300">
+                              <AlertTriangle className="w-3 h-3 text-rose-600" /> In-Person Pending
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
                               Directory Only (Free)
@@ -668,20 +874,34 @@ export default function AdminRegistrationsPage() {
                               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-100/60 px-1.5 py-0.5 rounded">
                                 ● Verified Pass Active
                               </span>
-                            ) : reg.txnId ? (
+                            ) : (
                               <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-800 bg-amber-100/70 px-1.5 py-0.5 rounded">
                                 <Clock className="w-2.5 h-2.5" /> Pending Verification
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">
-                                No UPI Submission
                               </span>
                             )}
                           </div>
                         )}
 
+                        {isInPersonPendingRecord(reg) && (
+                          <div className="pt-0.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSendSingleReminder(reg.id);
+                              }}
+                              disabled={actionLoading === `reminder-${reg.id}`}
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-orange-800 bg-orange-100/80 hover:bg-orange-200 px-2 py-0.5 rounded-md border border-orange-300 transition-colors disabled:opacity-50"
+                              title="Send payment proof upload reminder email"
+                            >
+                              <Mail className="w-3 h-3 text-orange-600" />
+                              {actionLoading === `reminder-${reg.id}` ? "Sending..." : "Send Reminder"}
+                            </button>
+                          </div>
+                        )}
+
                         {/* Guest Count Badge */}
-                        {isAttending && reg.guestCount && reg.guestCount !== "0" && (
+                        {(isAttending || isInPersonPendingRecord(reg)) && reg.guestCount && reg.guestCount !== "0" && (
                           <div className="text-[10px] text-zinc-500">
                             +{reg.guestCount} Guest{reg.guestCount !== "1" ? "s" : ""}
                           </div>
@@ -770,12 +990,18 @@ export default function AdminRegistrationsPage() {
                   </span>
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      selectedReg.attendingMeet !== false
+                      isAttendingRecord(selectedReg)
                         ? "bg-emerald-100 text-emerald-800"
+                        : isInPersonPendingRecord(selectedReg)
+                        ? "bg-rose-100 text-rose-800 border border-rose-300"
                         : "bg-zinc-200 text-zinc-700"
                     }`}
                   >
-                    {selectedReg.attendingMeet !== false ? "Attending (₹1,000)" : "Directory Only (Free)"}
+                    {isAttendingRecord(selectedReg)
+                      ? "Attending (₹1,000)"
+                      : isInPersonPendingRecord(selectedReg)
+                      ? "In-Person Pending (₹1,000)"
+                      : "Directory Only (Free)"}
                   </span>
                   {selectedReg.verified && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white flex items-center gap-1">
@@ -1026,13 +1252,61 @@ export default function AdminRegistrationsPage() {
                         <span className="text-zinc-400 text-[10px] block">Pass Status</span>
                         <span
                           className={`font-bold ${
-                            selectedReg.verified ? "text-emerald-700" : "text-amber-700"
+                            selectedReg.verified
+                              ? "text-emerald-700"
+                              : isAttendingRecord(selectedReg)
+                              ? "text-amber-700"
+                              : isInPersonPendingRecord(selectedReg)
+                              ? "text-rose-700"
+                              : "text-zinc-500"
                           }`}
                         >
-                          {selectedReg.verified ? "Active (Verified)" : "Pending Verification"}
+                          {selectedReg.verified
+                            ? "Active (Verified)"
+                            : isAttendingRecord(selectedReg)
+                            ? "Pending Verification"
+                            : isInPersonPendingRecord(selectedReg)
+                            ? "Payment Proof Not Uploaded"
+                            : "Not Attending (Free)"}
                         </span>
                       </div>
                     </div>
+
+                    {/* In-Person Pending Alert & Direct Reminder Dispatch */}
+                    {isInPersonPendingRecord(selectedReg) && (
+                      <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-rose-900">
+                            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                            <span>In-Person Pending: Payment Proof Not Uploaded</span>
+                          </div>
+                          <p className="text-[11px] text-rose-700">
+                            Selected ₹1,000 Meet pass, but closed the website before submitting UPI Txn ID or screenshot.
+                            {selectedReg.lastPaymentReminderSentAt && (
+                              <span className="block text-[10px] text-rose-600 font-medium mt-0.5">
+                                Last reminder dispatched: {new Date(selectedReg.lastPaymentReminderSentAt).toLocaleString()}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSendSingleReminder(selectedReg.id)}
+                          disabled={actionLoading === `reminder-${selectedReg.id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-colors shrink-0 disabled:opacity-50"
+                        >
+                          {actionLoading === `reminder-${selectedReg.id}` ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...
+                            </>
+                          ) : (
+                            <>
+                              <Mail className="w-3.5 h-3.5" /> Send Reminder Email
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    )}
 
                     {/* Screenshot Viewer */}
                     {selectedReg.screenshotUrl ? (
@@ -1051,7 +1325,7 @@ export default function AdminRegistrationsPage() {
                           <button
                             type="button"
                             onClick={() => setPreviewScreenshotUrl(selectedReg.screenshotUrl || null)}
-                            className="inline-flex items-center gap-1 font-semibold text-orange-700 hover:underline"
+                            className="inline-flex items-center gap-1.5 font-semibold text-orange-700 hover:underline"
                           >
                             <Camera className="w-3.5 h-3.5" /> View Full Payment Screenshot
                           </button>
@@ -1599,6 +1873,67 @@ export default function AdminRegistrationsPage() {
               >
                 Open Original in New Tab <ExternalLink className="w-3.5 h-3.5" />
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* BULK REMINDER CONFIRMATION MODAL */}
+      {bulkEmailConfirmOpen && (
+        <div className="fixed inset-0 z-60 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-zinc-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                <Mail className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-bold text-base text-zinc-900">
+                  Send Bulk Payment Reminders
+                </h3>
+                <p className="text-xs text-zinc-600 leading-relaxed">
+                  You are about to send reminder emails to all{" "}
+                  <strong className="text-rose-700">
+                    {counts.inPersonPendingCount} alumni
+                  </strong>{" "}
+                  marked as <span className="font-semibold text-zinc-900">In-Person Pending</span>.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 text-xs text-zinc-600 space-y-1.5">
+              <p className="font-semibold text-zinc-800">What this email contains:</p>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-zinc-500">
+                <li>Direct link to their unique payment & screenshot upload page</li>
+                <li>Instructions on how to submit UPI ID & proof if already paid</li>
+                <li>Clarification that without proof, they will be treated as registered for the directory only</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setBulkEmailConfirmOpen(false)}
+                disabled={bulkEmailLoading}
+                className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-semibold text-xs transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSendBulkReminder}
+                disabled={bulkEmailLoading}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-2xs transition-colors disabled:opacity-50"
+              >
+                {bulkEmailLoading ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Dispatching Emails...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5" /> Confirm & Send All
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

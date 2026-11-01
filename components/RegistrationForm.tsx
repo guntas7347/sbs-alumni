@@ -245,9 +245,9 @@ export default function RegistrationForm() {
         state: f.state,
         country: f.country,
         linkedin: f.linkedin,
-        // If attending: in-person; if info only: supporting
-        attendanceType: attendMeet ? "in-person" : "supporting",
-        attendingMeet: attendMeet,
+        // If attending: in-person-pending (until payment proof uploaded); if register only: supporting
+        attendanceType: attendMeet ? "in-person-pending" : "supporting",
+        attendingMeet: false,
         guestCount: String(attendMeet ? activeGuests.length : 0),
         guest1Name: attendMeet ? activeGuests[0]?.name || "" : "",
         guest1Relation: attendMeet ? activeGuests[0]?.relation || "" : "",

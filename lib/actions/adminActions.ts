@@ -2,7 +2,10 @@
 
 import { db } from "@/lib/firebase/firebase";
 import { sendMail } from "@/lib/emails/nodemailer";
-import { getPassIssuedEmailTemplate } from "@/lib/emails/templates";
+import {
+  getPassIssuedEmailTemplate,
+  getPaymentProofReminderEmailTemplate,
+} from "@/lib/emails/templates";
 import type { AuthorizedAdmin, AlumniRegistration } from "@/lib/types";
 
 const collectionName = "alumni_registrations_2026";
@@ -376,6 +379,8 @@ export async function verifyAlumniPayment(
 
     if (verified) {
       const updateData: Record<string, any> = {
+        attendingMeet: true,
+        attendanceType: "in-person",
         verified: true,
         hasPass: true,
         passStatus: "active",
@@ -537,6 +542,145 @@ export async function revokePass(
     return {
       success: false,
       error: error?.message || "Failed to revoke pass",
+    };
+  }
+}
+
+/**
+ * Send an email reminder to a single alumnus who is in-person-pending (selected ₹1,000 but no proof uploaded).
+ */
+export async function sendSinglePaymentProofReminder(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+
+    const docRef = db.collection(collectionName).doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Registration record not found" };
+    }
+
+    const regData = { id: docSnap.id, ...docSnap.data() } as AlumniRegistration;
+    if (!regData.email) {
+      return { success: false, error: "Alumnus has no email address on record" };
+    }
+
+    const template = getPaymentProofReminderEmailTemplate(regData);
+    await sendMail({
+      to: regData.email,
+      subject: template.subject,
+      text: template.text,
+      html: template.html,
+    });
+
+    // Record last reminder timestamp
+    await docRef.update({
+      lastPaymentReminderSentAt: new Date().toISOString(),
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error sending payment proof reminder:", error);
+    return {
+      success: false,
+      error: error?.message || "Failed to send payment proof reminder",
+    };
+  }
+}
+
+/**
+ * Send bulk payment proof reminder emails to all (or specific) in-person-pending alumni.
+ */
+export async function sendBulkPaymentProofReminders(
+  registrationIds?: string[]
+): Promise<{
+  success: boolean;
+  sentCount: number;
+  failedCount: number;
+  error?: string;
+}> {
+  try {
+    let targets: AlumniRegistration[] = [];
+
+    if (registrationIds && registrationIds.length > 0) {
+      const docs = await Promise.all(
+        registrationIds.map((id) => db.collection(collectionName).doc(id).get())
+      );
+      targets = docs
+        .filter((d) => d.exists)
+        .map((d) => ({ id: d.id, ...d.data() } as AlumniRegistration));
+    } else {
+      // Query all records from collection
+      const snapshot = await db.collection(collectionName).get();
+      snapshot.forEach((doc) => {
+        const d = doc.data();
+        const hasUploadedPayment = Boolean(
+          d?.verified ||
+          (d?.txnId && String(d.txnId).trim()) ||
+          (d?.screenshotUrl && String(d.screenshotUrl).trim())
+        );
+        const isPending =
+          !hasUploadedPayment &&
+          (d?.attendanceType === "in-person-pending" ||
+            d?.attendanceType === "in-person" ||
+            d?.attendingMeet === true ||
+            d?.amount === "1000");
+
+        if (isPending && d?.email) {
+          targets.push({ id: doc.id, ...d } as AlumniRegistration);
+        }
+      });
+    }
+
+    if (targets.length === 0) {
+      return {
+        success: true,
+        sentCount: 0,
+        failedCount: 0,
+        error: "No pending payment registrations found to email.",
+      };
+    }
+
+    let sentCount = 0;
+    let failedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const reg of targets) {
+      try {
+        if (!reg.email) continue;
+        const template = getPaymentProofReminderEmailTemplate(reg);
+        await sendMail({
+          to: reg.email,
+          subject: template.subject,
+          text: template.text,
+          html: template.html,
+        });
+        sentCount += 1;
+
+        // Update doc with reminder sent timestamp (best-effort)
+        db.collection(collectionName)
+          .doc(reg.id)
+          .update({ lastPaymentReminderSentAt: now })
+          .catch(() => {});
+      } catch (sendErr) {
+        console.error(`Failed to send reminder to ${reg.email}:`, sendErr);
+        failedCount += 1;
+      }
+    }
+
+    return {
+      success: true,
+      sentCount,
+      failedCount,
+    };
+  } catch (error: any) {
+    console.error("Error sending bulk payment proof reminders:", error);
+    return {
+      success: false,
+      sentCount: 0,
+      failedCount: 0,
+      error: error?.message || "Failed to send bulk reminder emails",
     };
   }
 }
