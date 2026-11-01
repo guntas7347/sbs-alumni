@@ -380,7 +380,7 @@ export async function verifyAlumniPayment(
     if (verified) {
       const updateData: Record<string, any> = {
         attendingMeet: true,
-        attendanceType: "in-person",
+        attendanceType: "attending",
         verified: true,
         hasPass: true,
         passStatus: "active",
@@ -471,6 +471,8 @@ export async function issueComplimentaryPass(
     await docRef.update({
       hasPass: true,
       passStatus: "active",
+      attendingMeet: true,
+      attendanceType: "attending",
       passPrice: 0,
       passIssuedAt: now,
       amount: 0,
@@ -620,12 +622,19 @@ export async function sendBulkPaymentProofReminders(
           (d?.txnId && String(d.txnId).trim()) ||
           (d?.screenshotUrl && String(d.screenshotUrl).trim())
         );
+        const isNonAttending =
+          d?.attendanceType === "non-attending" ||
+          d?.attendanceType === "supporting";
+
         const isPending =
           !hasUploadedPayment &&
-          (d?.attendanceType === "in-person-pending" ||
+          !isNonAttending &&
+          (d?.attendanceType === "pending" ||
+            d?.attendanceType === "in-person-pending" ||
+            d?.attendanceType === "attending" ||
             d?.attendanceType === "in-person" ||
-            d?.attendingMeet === true ||
-            d?.amount === "1000");
+            d?.amount === "1000" ||
+            d?.attendingMeet === true);
 
         if (isPending && d?.email) {
           targets.push({ id: doc.id, ...d } as AlumniRegistration);

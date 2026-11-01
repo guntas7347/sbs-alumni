@@ -113,7 +113,7 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                       }
                       <tr>
                         <td style="padding: 3px 0; color: #9a3412;">Registration Type:</td>
-                        <td style="padding: 3px 0; font-weight: 700; color: #ea580c; text-align: right;">${registration.attendingMeet !== false ? "Register + Attend Meet" : "Directory Record Only (Free)"}</td>
+                        <td style="padding: 3px 0; font-weight: 700; color: #ea580c; text-align: right;">${registration.attendanceType !== "non-attending" ? "Register + Attend Meet" : "Directory Record Only (Free)"}</td>
                       </tr>
                       ${
                         registration.guests && registration.guests.length > 0

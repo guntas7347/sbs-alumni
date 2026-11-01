@@ -41,29 +41,25 @@ export async function createAlumniRegistration(
     const regNumber = `SBSSU-ALM-${currentYear}-${randomSuffix}`;
     const now = new Date().toISOString();
 
-    // User's attendance selection intent
-    const wantsToAttend =
-      input.attendanceType === "in-person-pending" ||
-      (input.attendingMeet !== false && input.attendanceType !== "supporting");
-
     // User is ONLY officially marked as attending if payment proof (screenshot & txnId) is uploaded
     const hasUploadedPayment = Boolean(
       input.txnId && input.txnId.trim() &&
       input.screenshotUrl && input.screenshotUrl.trim()
     );
 
-    // 3 distinct states: "in-person", "in-person-pending", "supporting"
-    const attendanceType: "in-person" | "in-person-pending" | "supporting" = hasUploadedPayment
-      ? "in-person"
-      : wantsToAttend
-      ? "in-person-pending"
-      : "supporting";
+    // 3 distinct states: "pending" | "non-attending" | "attending"
+    const attendanceType: "pending" | "non-attending" | "attending" = hasUploadedPayment
+      ? "attending"
+      : input.attendanceType === "non-attending"
+      ? "non-attending"
+      : "pending";
 
-    const isAttending = attendanceType === "in-person";
+    const isAttending = attendanceType === "attending";
+    const isMeetParticipant = attendanceType !== "non-attending";
 
     // Validate accompanying guests (max 3, only Mom, Dad, Spouse, Child)
     let validatedGuests: { name: string; relation: "Mom" | "Dad" | "Spouse" | "Child" }[] = [];
-    if (wantsToAttend && input.guests && input.guests.length > 0) {
+    if (isMeetParticipant && input.guests && input.guests.length > 0) {
       if (input.guests.length > 3) {
         return {
           success: false,
@@ -109,12 +105,12 @@ export async function createAlumniRegistration(
     const guestCountStr = String(guestListStr.length);
 
     // Stage Performance Request
-    const wantToPerform = Boolean(wantsToAttend && input.wantToPerform);
+    const wantToPerform = Boolean(isMeetParticipant && input.wantToPerform);
     const performanceType = wantToPerform ? (input.performanceType?.trim() || "") : "";
     const performanceStatus = wantToPerform ? "pending" : "none";
 
     // Vice Chancellor Interaction Request
-    const wantToInteractWithVC = Boolean(wantsToAttend && input.wantToInteractWithVC);
+    const wantToInteractWithVC = Boolean(isMeetParticipant && input.wantToInteractWithVC);
     const vcInteractionPortfolio = wantToInteractWithVC ? (input.vcInteractionPortfolio?.trim() || "") : "";
     const vcInteractionReason = wantToInteractWithVC ? (input.vcInteractionReason?.trim() || "") : "";
     const vcInteractionStatus = wantToInteractWithVC ? "pending" : "none";
@@ -146,7 +142,7 @@ export async function createAlumniRegistration(
       attendanceType,
       hasPass: false,
       passStatus: "none",
-      amount: wantsToAttend ? "1000" : "0",
+      amount: attendanceType === "non-attending" ? "0" : "1000",
 
       specialRequest,
 
@@ -221,9 +217,9 @@ export async function createAlumniRegistration(
 
 /**
  * Normalizes an alumni record from Firestore into 3 distinct attendance states:
- * 1. "in-person": Chose to attend AND uploaded payment proof (or verified).
- * 2. "in-person-pending": Chose to attend (₹1,000), but closed website before uploading payment proof.
- * 3. "supporting": Chose directory registration only (Free).
+ * 1. "attending": Chose to attend AND uploaded payment proof (or verified).
+ * 2. "pending": Chose to attend (₹1,000), but awaiting payment proof submission.
+ * 3. "non-attending": Registered for alumni directory only (Free).
  */
 function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration {
   const hasUploadedPayment = Boolean(
@@ -234,24 +230,39 @@ function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration 
     (data?.paymentDetails?.screenshotUrl && String(data.paymentDetails.screenshotUrl).trim())
   );
 
-  // Check if alumnus originally opted to attend Sanjh 2026
-  const choseToAttend = Boolean(
-    data?.attendanceType === "in-person" ||
-    data?.attendanceType === "in-person-pending" ||
-    data?.attendingMeet === true ||
+  let attendanceType: "pending" | "non-attending" | "attending";
+
+  if (hasUploadedPayment) {
+    attendanceType = "attending";
+  } else if (
+    data?.attendanceType === "non-attending" ||
+    data?.attendanceType === "supporting"
+  ) {
+    attendanceType = "non-attending";
+  } else if (
+    data?.attendanceType === "pending" ||
+    data?.attendanceType === "in-person-pending"
+  ) {
+    attendanceType = "pending";
+  } else if (
+    data?.attendanceType === "attending" ||
+    data?.attendanceType === "in-person"
+  ) {
+    // Marked attending but payment proof not yet uploaded -> pending
+    attendanceType = "pending";
+  } else if (
     data?.amount === "1000" ||
-    data?.passPrice === 1000 ||
-    (data?.guestCount && data.guestCount !== "0") ||
-    data?.guest1Name
-  );
+    data?.attendingMeet === true ||
+    (data?.guestCount && data.guestCount !== "0" && data.guestCount !== 0) ||
+    (data?.guest1Name && String(data.guest1Name).trim() !== "")
+  ) {
+    // Legacy record indicating attend intent without proof
+    attendanceType = "pending";
+  } else {
+    attendanceType = "non-attending";
+  }
 
-  const attendanceType: "in-person" | "in-person-pending" | "supporting" = hasUploadedPayment
-    ? "in-person"
-    : choseToAttend
-    ? "in-person-pending"
-    : "supporting";
-
-  const isAttending = attendanceType === "in-person";
+  const isAttending = attendanceType === "attending";
 
   const hasPass = Boolean(
     data?.hasPass === true ||
@@ -264,13 +275,13 @@ function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration 
     id,
     attendingMeet: isAttending,
     attendanceType,
-    amount: choseToAttend ? "1000" : "0",
+    amount: attendanceType === "non-attending" ? "0" : "1000",
     hasPass,
     passStatus: data?.passStatus || (hasPass ? "active" : "none"),
-    passPrice: data?.passPrice || 1000,
+    passPrice: attendanceType === "non-attending" ? 0 : 1000,
     performerStatus: data?.performerStatus || "none",
     txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
-    paymentMode: data?.paymentMode || data?.paymentDetails?.paymentMethod || (choseToAttend ? "UPI_QR" : ""),
+    paymentMode: data?.paymentMode || data?.paymentDetails?.paymentMethod || (attendanceType !== "non-attending" ? "UPI_QR" : ""),
     verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
     screenshotUrl:
       data?.screenshotUrl ||
@@ -519,7 +530,7 @@ export async function submitUpiPayment({
 
     await docRef.update({
       attendingMeet: true,
-      attendanceType: "in-person",
+      attendanceType: "attending",
       txnId: trimmedTxnId,
       paymentMode: "UPI_QR",
       verified: false,
@@ -546,7 +557,7 @@ export async function submitUpiPayment({
         ...regData,
         id: registrationId,
         attendingMeet: true,
-        attendanceType: "in-person",
+        attendanceType: "attending",
         txnId: trimmedTxnId,
         paymentMode: "UPI_QR",
         verified: false,

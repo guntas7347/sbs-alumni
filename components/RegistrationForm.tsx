@@ -245,8 +245,8 @@ export default function RegistrationForm() {
         state: f.state,
         country: f.country,
         linkedin: f.linkedin,
-        // If attending: in-person-pending (until payment proof uploaded); if register only: supporting
-        attendanceType: attendMeet ? "in-person-pending" : "supporting",
+        // Only store attendanceType: "pending" (meet selected, awaiting payment) or "non-attending" (register only, free)
+        attendanceType: attendMeet ? "pending" : "non-attending",
         attendingMeet: false,
         guestCount: String(attendMeet ? activeGuests.length : 0),
         guest1Name: attendMeet ? activeGuests[0]?.name || "" : "",
@@ -286,6 +286,7 @@ export default function RegistrationForm() {
       }
     } catch (err: any) {
       setServerError(err?.message || "An unexpected error occurred.");
+    } finally {
       setSubmitting(false);
     }
   };

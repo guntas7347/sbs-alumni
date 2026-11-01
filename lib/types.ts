@@ -31,9 +31,9 @@ export interface AlumniRegistration {
   linkedin?: string;
   memoriesMessage?: string;
 
-  // 3. Attendance & Event Pass
+  // 3. Attendance & Event Pass (3 distinct states: pending, non-attending, attending)
   attendingMeet: boolean;
-  attendanceType?: "in-person" | "in-person-pending" | "supporting";
+  attendanceType: "pending" | "non-attending" | "attending";
   hasPass: boolean;
   passStatus: string; // "none" | "active" | "cancelled" | "pending"
   amount: string; // "1000" or "0"

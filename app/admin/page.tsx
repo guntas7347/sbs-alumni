@@ -54,8 +54,8 @@ import {
 type FilterTab =
   | "all"
   | "attending"
-  | "in-person-pending"
-  | "free"
+  | "pending"
+  | "non-attending"
   | "performers"
   | "vc_interactions";
 
@@ -115,27 +115,19 @@ export default function AdminRegistrationsPage() {
     loadData();
   }, []);
 
-  // 1. "in-person": Chose to attend AND payment proof is uploaded (or verified)
+  // 3 Clear Attendance States: "attending" | "pending" | "non-attending"
   const isAttendingRecord = (r: AlumniRegistration) =>
-    r.attendanceType === "in-person" ||
-    Boolean(
-      r.attendingMeet &&
-      (r.verified || (r.txnId && r.txnId.trim()) || (r.screenshotUrl && r.screenshotUrl.trim()))
-    );
+    r.attendanceType === "attending" ||
+    (r.attendanceType as string) === "in-person";
 
-  // 2. "in-person-pending": Chose to attend (₹1,000) but payment proof is missing
-  const isInPersonPendingRecord = (r: AlumniRegistration) =>
-    r.attendanceType === "in-person-pending" ||
-    (!isAttendingRecord(r) &&
-      (r.amount === "1000" ||
-        r.passPrice === 1000 ||
-        r.attendingMeet ||
-        (r.guestCount && r.guestCount !== "0") ||
-        Boolean(r.guest1Name)));
+  const isPendingRecord = (r: AlumniRegistration) =>
+    r.attendanceType === "pending" ||
+    (r.attendanceType as string) === "in-person-pending";
 
-  // 3. "supporting": Directory registration only (Free)
-  const isSupportingRecord = (r: AlumniRegistration) =>
-    !isAttendingRecord(r) && !isInPersonPendingRecord(r);
+  const isNonAttendingRecord = (r: AlumniRegistration) =>
+    r.attendanceType === "non-attending" ||
+    (r.attendanceType as string) === "supporting" ||
+    (!isAttendingRecord(r) && !isPendingRecord(r));
 
   // Bulk reminder email handler
   const handleSendBulkReminder = async () => {
@@ -143,7 +135,7 @@ export default function AdminRegistrationsPage() {
     setBulkEmailResult(null);
     try {
       const pendingIds = registrations
-        .filter((r) => isInPersonPendingRecord(r))
+        .filter(isPendingRecord)
         .map((r) => r.id);
 
       const res = await sendBulkPaymentProofReminders(pendingIds);
@@ -208,8 +200,8 @@ export default function AdminRegistrationsPage() {
   const counts = useMemo(() => {
     const total = registrations.length;
     const attendingCount = registrations.filter(isAttendingRecord).length;
-    const inPersonPendingCount = registrations.filter(isInPersonPendingRecord).length;
-    const freeCount = registrations.filter(isSupportingRecord).length;
+    const pendingCount = registrations.filter(isPendingRecord).length;
+    const nonAttendingCount = registrations.filter(isNonAttendingRecord).length;
     const performerCount = registrations.filter(
       (r) =>
         r.wantToPerform ||
@@ -226,8 +218,8 @@ export default function AdminRegistrationsPage() {
     return {
       total,
       attendingCount,
-      inPersonPendingCount,
-      freeCount,
+      pendingCount,
+      nonAttendingCount,
       performerCount,
       vcCount,
     };
@@ -240,10 +232,10 @@ export default function AdminRegistrationsPage() {
     // Filter by tab
     if (currentTab === "attending") {
       list = list.filter(isAttendingRecord);
-    } else if (currentTab === "in-person-pending") {
-      list = list.filter(isInPersonPendingRecord);
-    } else if (currentTab === "free") {
-      list = list.filter(isSupportingRecord);
+    } else if (currentTab === "pending") {
+      list = list.filter(isPendingRecord);
+    } else if (currentTab === "non-attending") {
+      list = list.filter(isNonAttendingRecord);
     } else if (currentTab === "performers") {
       list = list.filter(
         (r) =>
@@ -543,33 +535,33 @@ export default function AdminRegistrationsPage() {
         </button>
 
         <button
-          onClick={() => setCurrentTab("in-person-pending")}
+          onClick={() => setCurrentTab("pending")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
-            currentTab === "in-person-pending"
+            currentTab === "pending"
               ? "bg-rose-50/80 border-rose-300 ring-2 ring-rose-400"
               : "bg-white border-zinc-200 hover:border-zinc-300"
           }`}
         >
           <span className="text-[11px] font-semibold text-rose-800 block flex items-center gap-1">
-            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> In-Person Pending
+            <AlertTriangle className="w-3.5 h-3.5 text-rose-600" /> Pending (₹1,000)
           </span>
           <div className="text-xl sm:text-2xl font-black text-rose-950 mt-0.5">
-            {counts.inPersonPendingCount}
+            {counts.pendingCount}
           </div>
           <span className="text-[10px] text-rose-700">Proof missing / closed site</span>
         </button>
 
         <button
-          onClick={() => setCurrentTab("free")}
+          onClick={() => setCurrentTab("non-attending")}
           className={`p-3.5 rounded-2xl border text-left transition-all ${
-            currentTab === "free"
+            currentTab === "non-attending"
               ? "bg-zinc-100 border-zinc-400 ring-2 ring-zinc-400"
               : "bg-white border-zinc-200 hover:border-zinc-300"
           }`}
         >
-          <span className="text-[11px] font-semibold text-zinc-600 block">Directory Only</span>
-          <div className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">{counts.freeCount}</div>
-          <span className="text-[10px] text-zinc-400">Free (No attend)</span>
+          <span className="text-[11px] font-semibold text-zinc-600 block">Non-Attending</span>
+          <div className="text-xl sm:text-2xl font-black text-zinc-900 mt-0.5">{counts.nonAttendingCount}</div>
+          <span className="text-[10px] text-zinc-400">Directory only (Free)</span>
         </button>
 
         <button
@@ -605,8 +597,8 @@ export default function AdminRegistrationsPage() {
         </button>
       </div>
 
-      {/* IN-PERSON PENDING BANNER & BULK EMAIL ACTION */}
-      {counts.inPersonPendingCount > 0 && (
+      {/* PENDING BANNER & BULK EMAIL ACTION */}
+      {counts.pendingCount > 0 && (
         <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-50 via-rose-50 to-orange-50 border-2 border-amber-300 text-amber-950 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-2xs">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center shrink-0 mt-0.5">
@@ -615,14 +607,14 @@ export default function AdminRegistrationsPage() {
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-mono text-xs font-black bg-rose-600 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">
-                  {counts.inPersonPendingCount} In-Person Pending
+                  {counts.pendingCount} Pending
                 </span>
                 <span className="text-xs font-bold text-zinc-800">
                   Selected ₹1,000 meet pass, but closed website without uploading payment proof
                 </span>
               </div>
               <p className="text-xs text-zinc-600 leading-relaxed max-w-2xl">
-                These alumni opted to attend Sanjh 2026 in-person, but have not uploaded their payment screenshot and UPI Transaction ID. They may have paid at the QR code. You can send them a direct email with their personal link to upload their screenshot or be marked as directory registration only.
+                These alumni opted to attend Sanjh 2026, but have not uploaded their payment screenshot and UPI Transaction ID. They may have paid at the QR code. You can send them a direct email with their personal link to upload their screenshot or be marked as directory registration only.
               </p>
             </div>
           </div>
@@ -633,7 +625,7 @@ export default function AdminRegistrationsPage() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs transition-all shrink-0 disabled:opacity-50"
           >
             <Mail className="w-4 h-4" />
-            {bulkEmailLoading ? "Sending Emails..." : `Email All ${counts.inPersonPendingCount} Pending Alumni`}
+            {bulkEmailLoading ? "Sending Emails..." : `Email All ${counts.pendingCount} Pending Alumni`}
           </button>
         </div>
       )}
@@ -716,25 +708,25 @@ export default function AdminRegistrationsPage() {
             Attending ({counts.attendingCount})
           </button>
           <button
-            onClick={() => setCurrentTab("in-person-pending")}
+            onClick={() => setCurrentTab("pending")}
             className={`px-3 py-1 rounded-lg font-semibold transition-colors flex items-center gap-1 ${
-              currentTab === "in-person-pending"
+              currentTab === "pending"
                 ? "bg-rose-600 text-white"
                 : "bg-rose-50 text-rose-800 hover:bg-rose-100"
             }`}
           >
             <AlertTriangle className="w-3 h-3" />
-            In-Person Pending ({counts.inPersonPendingCount})
+            Pending ({counts.pendingCount})
           </button>
           <button
-            onClick={() => setCurrentTab("free")}
+            onClick={() => setCurrentTab("non-attending")}
             className={`px-3 py-1 rounded-lg font-semibold transition-colors ${
-              currentTab === "free"
+              currentTab === "non-attending"
                 ? "bg-zinc-700 text-white"
                 : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
             }`}
           >
-            Non-Attending / Free ({counts.freeCount})
+            Non-Attending ({counts.nonAttendingCount})
           </button>
           <button
             onClick={() => setCurrentTab("performers")}
@@ -853,17 +845,17 @@ export default function AdminRegistrationsPage() {
                       {/* Column 4: Attendance & Meet Pass */}
                       <td className="py-3.5 px-4 space-y-1">
                         <div>
-                          {isAttending ? (
+                          {isAttendingRecord(reg) ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
                               <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Attending (₹1,000)
                             </span>
-                          ) : isInPersonPendingRecord(reg) ? (
+                          ) : isPendingRecord(reg) ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-800 border border-rose-300">
-                              <AlertTriangle className="w-3 h-3 text-rose-600" /> In-Person Pending
+                              <AlertTriangle className="w-3 h-3 text-rose-600" /> Pending (₹1,000)
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 text-zinc-600 border border-zinc-200">
-                              Directory Only (Free)
+                              Non-Attending (Free)
                             </span>
                           )}
                         </div>
@@ -882,7 +874,7 @@ export default function AdminRegistrationsPage() {
                           </div>
                         )}
 
-                        {isInPersonPendingRecord(reg) && (
+                        {isPendingRecord(reg) && (
                           <div className="pt-0.5">
                             <button
                               type="button"
@@ -901,7 +893,7 @@ export default function AdminRegistrationsPage() {
                         )}
 
                         {/* Guest Count Badge */}
-                        {(isAttending || isInPersonPendingRecord(reg)) && reg.guestCount && reg.guestCount !== "0" && (
+                        {(isAttending || isPendingRecord(reg)) && reg.guestCount && reg.guestCount !== "0" && (
                           <div className="text-[10px] text-zinc-500">
                             +{reg.guestCount} Guest{reg.guestCount !== "1" ? "s" : ""}
                           </div>
@@ -992,16 +984,16 @@ export default function AdminRegistrationsPage() {
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       isAttendingRecord(selectedReg)
                         ? "bg-emerald-100 text-emerald-800"
-                        : isInPersonPendingRecord(selectedReg)
+                        : isPendingRecord(selectedReg)
                         ? "bg-rose-100 text-rose-800 border border-rose-300"
                         : "bg-zinc-200 text-zinc-700"
                     }`}
                   >
                     {isAttendingRecord(selectedReg)
                       ? "Attending (₹1,000)"
-                      : isInPersonPendingRecord(selectedReg)
-                      ? "In-Person Pending (₹1,000)"
-                      : "Directory Only (Free)"}
+                      : isPendingRecord(selectedReg)
+                      ? "Pending (₹1,000)"
+                      : "Non-Attending (Free)"}
                   </span>
                   {selectedReg.verified && (
                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-600 text-white flex items-center gap-1">
@@ -1256,7 +1248,7 @@ export default function AdminRegistrationsPage() {
                               ? "text-emerald-700"
                               : isAttendingRecord(selectedReg)
                               ? "text-amber-700"
-                              : isInPersonPendingRecord(selectedReg)
+                              : isPendingRecord(selectedReg)
                               ? "text-rose-700"
                               : "text-zinc-500"
                           }`}
@@ -1265,20 +1257,20 @@ export default function AdminRegistrationsPage() {
                             ? "Active (Verified)"
                             : isAttendingRecord(selectedReg)
                             ? "Pending Verification"
-                            : isInPersonPendingRecord(selectedReg)
+                            : isPendingRecord(selectedReg)
                             ? "Payment Proof Not Uploaded"
-                            : "Not Attending (Free)"}
+                            : "Non-Attending (Free)"}
                         </span>
                       </div>
                     </div>
 
-                    {/* In-Person Pending Alert & Direct Reminder Dispatch */}
-                    {isInPersonPendingRecord(selectedReg) && (
+                    {/* Pending Alert & Direct Reminder Dispatch */}
+                    {isPendingRecord(selectedReg) && (
                       <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-rose-900">
                             <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                            <span>In-Person Pending: Payment Proof Not Uploaded</span>
+                            <span>Pending: Payment Proof Not Uploaded</span>
                           </div>
                           <p className="text-[11px] text-rose-700">
                             Selected ₹1,000 Meet pass, but closed the website before submitting UPI Txn ID or screenshot.
@@ -1612,25 +1604,27 @@ export default function AdminRegistrationsPage() {
                     </div>
                   </div>
 
-                  {/* Attendance & Guests Edit */}
+                  {/* Attendance Status Edit */}
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 space-y-3 text-xs">
-                    <div className="flex items-center gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={Boolean(editForm.attendingMeet)}
-                          onChange={(e) =>
-                            setEditForm({
-                              ...editForm,
-                              attendingMeet: e.target.checked,
-                              amount: e.target.checked ? "1000" : "0",
-                            })
-                          }
-                          className="rounded text-orange-600 focus:ring-orange-500"
-                        />
-                        <span className="font-semibold text-zinc-800">Attending Meet (₹1,000)</span>
-                      </label>
-                      <span className="text-zinc-400">Amount: ₹{editForm.amount || "0"}</span>
+                    <div>
+                      <label className="block text-zinc-600 font-semibold mb-1">Attendance Status</label>
+                      <select
+                        value={editForm.attendanceType || "non-attending"}
+                        onChange={(e) => {
+                          const val = e.target.value as "pending" | "non-attending" | "attending";
+                          setEditForm({
+                            ...editForm,
+                            attendanceType: val,
+                            attendingMeet: val === "attending",
+                            amount: val === "non-attending" ? "0" : "1000",
+                          });
+                        }}
+                        className="w-full sm:w-auto px-3 py-1.5 rounded-xl border border-zinc-300 font-semibold text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      >
+                        <option value="attending">Attending (₹1,000 - Proof Uploaded / Pass Active)</option>
+                        <option value="pending">Pending (₹1,000 - Proof Not Uploaded)</option>
+                        <option value="non-attending">Non-Attending (Directory Only, Free)</option>
+                      </select>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1893,9 +1887,9 @@ export default function AdminRegistrationsPage() {
                 <p className="text-xs text-zinc-600 leading-relaxed">
                   You are about to send reminder emails to all{" "}
                   <strong className="text-rose-700">
-                    {counts.inPersonPendingCount} alumni
+                    {counts.pendingCount} alumni
                   </strong>{" "}
-                  marked as <span className="font-semibold text-zinc-900">In-Person Pending</span>.
+                  marked as <span className="font-semibold text-zinc-900">Pending</span>.
                 </p>
               </div>
             </div>

@@ -618,10 +618,17 @@ export default function RegistrationsTable({
                             Roll: {reg.rollNumber}
                           </div>
                         )}
-                        {reg.attendingMeet === false && (
+                        {reg.attendanceType === "non-attending" && (
                           <div className="mt-1">
                             <span className="inline-block text-[9px] font-bold text-zinc-500 bg-zinc-100 border border-zinc-200 px-1.5 py-0.5 rounded">
                               Directory Info Only
+                            </span>
+                          </div>
+                        )}
+                        {reg.attendanceType === "pending" && (
+                          <div className="mt-1">
+                            <span className="inline-block text-[9px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded">
+                              Pending Payment Proof
                             </span>
                           </div>
                         )}
