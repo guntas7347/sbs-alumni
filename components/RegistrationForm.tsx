@@ -202,6 +202,10 @@ export default function RegistrationForm() {
     }
 
     setSubmitting(true);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
 
     // Format "Other" Degree and Branch selections
     let finalDegree = f.degree;
@@ -282,7 +286,6 @@ export default function RegistrationForm() {
       }
     } catch (err: any) {
       setServerError(err?.message || "An unexpected error occurred.");
-    } finally {
       setSubmitting(false);
     }
   };
@@ -293,6 +296,17 @@ export default function RegistrationForm() {
         <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
         <p className="text-sm text-zinc-500 font-medium">
           Verifying authentication status...
+        </p>
+      </div>
+    );
+  }
+
+  if (submitting) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
+        <p className="text-sm text-zinc-500 font-medium">
+          Submitting your registration...
         </p>
       </div>
     );

@@ -112,6 +112,10 @@ export default function PaymentClient({
 
     setError(null);
     setUploading(true);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
 
     const cleanTxnId = txnId.trim();
     if (!cleanTxnId) {

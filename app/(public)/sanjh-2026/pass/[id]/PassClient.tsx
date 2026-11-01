@@ -3,10 +3,7 @@
 import React, { useState, useEffect, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  getAlumniRegistrationById,
-  submitPerformanceApplication,
-} from "@/lib/actions/alumniActions";
+import { getAlumniRegistrationById } from "@/lib/actions/alumniActions";
 import type { AlumniRegistration } from "@/lib/types";
 import Barcode from "@/components/Barcode";
 import {
