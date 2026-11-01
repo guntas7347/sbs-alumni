@@ -379,12 +379,9 @@ export async function verifyAlumniPayment(
         verified: true,
         hasPass: true,
         passStatus: "active",
-        passIssuedAt: now,
-        amount: 1000,
-        paymentStatus: "completed",
-        "paymentDetails.verified": true,
-        "paymentDetails.verifiedAt": now,
-        "paymentDetails.verifiedBy": verifiedBy || "Admin",
+        amount: "1000",
+        verifiedBy: verifiedBy || "Admin",
+        verifiedAt: now,
         updatedAt: now,
       };
 
@@ -402,10 +399,10 @@ export async function verifyAlumniPayment(
           verified: true,
           hasPass: true,
           passStatus: "active",
-          passIssuedAt: now,
-          amount: 1000,
-          paymentStatus: "completed",
-          txnId: regData?.txnId || regData?.paymentDetails?.transactionId || "",
+          amount: "1000",
+          verifiedBy: verifiedBy || "Admin",
+          verifiedAt: now,
+          txnId: regData?.txnId || "",
           paymentMode: regData?.paymentMode || "UPI_QR",
         } as AlumniRegistration;
 
@@ -425,8 +422,8 @@ export async function verifyAlumniPayment(
         verified: false,
         hasPass: false,
         passStatus: "none",
-        paymentStatus: "pending",
-        "paymentDetails.verified": false,
+        verifiedBy: "",
+        verifiedAt: "",
         updatedAt: now,
       };
 
@@ -493,9 +490,9 @@ export async function issueComplimentaryPass(
         id,
         hasPass: true,
         passStatus: "active",
-        amount: 0,
+        amount: "0",
         paymentStatus: "completed",
-      } as AlumniRegistration;
+      } as unknown as AlumniRegistration;
 
       const passTemplate = getPassIssuedEmailTemplate(fullRecord, true);
       await sendMail({

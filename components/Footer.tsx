@@ -1,6 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Mail, Phone, MapPin, Globe, ExternalLink, Heart, Sparkles } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  Globe,
+  ExternalLink,
+  Heart,
+  Sparkles,
+} from "lucide-react";
 
 export default function Footer() {
   return (
@@ -33,7 +41,9 @@ export default function Footer() {
             </div>
 
             <p className="text-xs text-zinc-500 leading-relaxed">
-              Established by the Govt. of Punjab in 1995 as SBSCET, upgraded to state technical campus in 2011 (SBSSTC), and elevated to full State University status (SBSSU) in 2021-22.
+              Established by the Govt. of Punjab in 1995 as SBSCET, upgraded to
+              state technical campus in 2011 (SBSSTC), and elevated to full
+              State University status (SBSSU) in 2021-22.
             </p>
 
             <div className="flex flex-wrap gap-1.5 pt-1">
@@ -56,7 +66,8 @@ export default function Footer() {
               Sanjh 2026 – SECA
             </h4>
             <p className="text-xs text-zinc-500 leading-relaxed">
-              SECA Annual Cultural Function & Grand Alumni Meet 2026. A celebration of togetherness, memories, and bonding.
+              SECA Annual Cultural Function & Grand Alumni Meet 2026. A
+              celebration of togetherness, memories, and bonding.
             </p>
             <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1.5 text-xs">
               <div className="font-medium text-emerald-950">
@@ -65,9 +76,9 @@ export default function Footer() {
               <div className="text-emerald-800 text-[11px]">
                 Main University Auditorium & Lawns, SBSSU Campus
               </div>
-              <div className="text-[11px] font-semibold text-emerald-700 pt-1">
+              {/* <div className="text-[11px] font-semibold text-emerald-700 pt-1">
                 📜 Participation Certificates for all registered performers!
-              </div>
+              </div> */}
             </div>
           </div>
 
@@ -76,32 +87,50 @@ export default function Footer() {
             <h4 className="font-semibold text-zinc-900 text-sm">Quick Links</h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/" className="hover:text-orange-600 transition-colors">
+                <Link
+                  href="/"
+                  className="hover:text-orange-600 transition-colors"
+                >
                   Home & VC Message
                 </Link>
               </li>
               <li>
-                <Link href="/sanjh-2026" className="hover:text-orange-600 transition-colors">
+                <Link
+                  href="/sanjh-2026"
+                  className="hover:text-orange-600 transition-colors"
+                >
                   Sanjh 2026 Cultural Schedule
                 </Link>
               </li>
               <li>
-                <Link href="/schedule" className="hover:text-orange-600 transition-colors font-medium text-orange-800">
+                <Link
+                  href="/schedule"
+                  className="hover:text-orange-600 transition-colors font-medium text-orange-800"
+                >
                   Minute-to-Minute Programme (Schedule)
                 </Link>
               </li>
               <li>
-                <Link href="/about" className="hover:text-orange-600 transition-colors">
+                <Link
+                  href="/about"
+                  className="hover:text-orange-600 transition-colors"
+                >
                   University History & Evolution
                 </Link>
               </li>
               <li>
-                <Link href="/sanjh-2026/register" className="hover:text-orange-600 transition-colors">
+                <Link
+                  href="/sanjh-2026/register"
+                  className="hover:text-orange-600 transition-colors"
+                >
                   Alumni Registration & Meet Pass
                 </Link>
               </li>
               <li>
-                <Link href="/admin" className="hover:text-orange-600 transition-colors">
+                <Link
+                  href="/admin"
+                  className="hover:text-orange-600 transition-colors"
+                >
                   Admin Management Portal
                 </Link>
               </li>
@@ -112,7 +141,8 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-orange-700 hover:text-orange-800 font-medium"
                 >
-                  Official University Site (sbssu.ac.in) <ExternalLink className="w-3 h-3" />
+                  Official University Site (sbssu.ac.in){" "}
+                  <ExternalLink className="w-3 h-3" />
                 </a>
               </li>
             </ul>
@@ -120,12 +150,15 @@ export default function Footer() {
 
           {/* Col 4: Campus Contact */}
           <div className="space-y-3">
-            <h4 className="font-semibold text-zinc-900 text-sm">Campus Contact</h4>
+            <h4 className="font-semibold text-zinc-900 text-sm">
+              Campus Contact
+            </h4>
             <ul className="space-y-2.5 text-xs text-zinc-600">
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-orange-600 shrink-0 mt-0.5" />
                 <span>
-                  Shaheed Bhagat Singh State University, Moga Road, Ferozepur - 152004, Punjab, India.
+                  Shaheed Bhagat Singh State University, Moga Road, Ferozepur -
+                  152004, Punjab, India.
                 </span>
               </li>
               <li className="flex items-center gap-2">
@@ -140,7 +173,12 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-600 shrink-0" />
-                <a href="https://sbssu.ac.in" target="_blank" rel="noopener noreferrer" className="hover:underline">
+                <a
+                  href="https://sbssu.ac.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                >
                   https://sbssu.ac.in
                 </a>
               </li>
@@ -151,13 +189,15 @@ export default function Footer() {
         {/* Bottom copyright */}
         <div className="mt-12 pt-6 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
           <p>
-            © 2026 Shaheed Bhagat Singh State University (SBSSU), Ferozepur. All rights reserved.
+            © 2026 Shaheed Bhagat Singh State University (SBSSU), Ferozepur. All
+            rights reserved.
           </p>
           <div className="flex items-center gap-4">
             <span className="text-zinc-400">alumni.sbssu.ac.in</span>
             <span>•</span>
             <span className="inline-flex items-center gap-1 text-zinc-600">
-              Crafted for our Alumni & Students <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+              Crafted for our Alumni & Students{" "}
+              <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
             </span>
           </div>
         </div>

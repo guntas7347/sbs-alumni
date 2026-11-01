@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { verifyAdminEmail } from "@/lib/actions/adminActions";
 import {
@@ -15,6 +16,82 @@ import {
   Users,
   CheckCircle2,
 } from "lucide-react";
+
+function AdminNavLinks() {
+  const pathname = usePathname();
+  return (
+    <nav className="hidden md:flex items-center gap-1.5 text-xs font-semibold">
+      <Link
+        href="/admin"
+        className={`px-3.5 py-2 rounded-xl transition-colors ${
+          pathname === "/admin"
+            ? "bg-orange-100 text-orange-900 font-bold shadow-2xs"
+            : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+        }`}
+      >
+        Registrations
+      </Link>
+      <Link
+        href="/admin/transactions"
+        className={`px-3.5 py-2 rounded-xl transition-colors ${
+          pathname === "/admin/transactions"
+            ? "bg-orange-100 text-orange-900 font-bold shadow-2xs"
+            : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+        }`}
+      >
+        Transactions
+      </Link>
+      <Link
+        href="/admin/admins"
+        className={`px-3.5 py-2 rounded-xl transition-colors ${
+          pathname === "/admin/admins"
+            ? "bg-orange-100 text-orange-900 font-bold shadow-2xs"
+            : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900"
+        }`}
+      >
+        Admin
+      </Link>
+    </nav>
+  );
+}
+
+function MobileAdminNavLinks() {
+  const pathname = usePathname();
+  return (
+    <div className="flex md:hidden overflow-x-auto py-2 border-t border-zinc-100 gap-1.5 text-xs font-semibold">
+      <Link
+        href="/admin"
+        className={`px-3 py-1.5 rounded-lg shrink-0 ${
+          pathname === "/admin"
+            ? "bg-orange-100 text-orange-900 font-bold"
+            : "text-zinc-700 hover:bg-zinc-100"
+        }`}
+      >
+        Registrations
+      </Link>
+      <Link
+        href="/admin/transactions"
+        className={`px-3 py-1.5 rounded-lg shrink-0 ${
+          pathname === "/admin/transactions"
+            ? "bg-orange-100 text-orange-900 font-bold"
+            : "text-zinc-700 hover:bg-zinc-100"
+        }`}
+      >
+        Transactions
+      </Link>
+      <Link
+        href="/admin/admins"
+        className={`px-3 py-1.5 rounded-lg shrink-0 ${
+          pathname === "/admin/admins"
+            ? "bg-orange-100 text-orange-900 font-bold"
+            : "text-zinc-700 hover:bg-zinc-100"
+        }`}
+      >
+        Admin
+      </Link>
+    </div>
+  );
+}
 
 export default function AdminGuard({
   children,
@@ -125,12 +202,16 @@ export default function AdminGuard({
               Unauthorized Google Account
             </h1>
             <p className="text-xs text-zinc-600">
-              The Google account <strong className="text-zinc-900">{user.email}</strong> is not listed in the authorized administrators collection in Firestore.
+              The Google account{" "}
+              <strong className="text-zinc-900">{user.email}</strong> is not
+              listed in the authorized administrators collection in Firestore.
             </p>
           </div>
 
           <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-500 text-left">
-            To gain administrator access to view and manage alumni registrations, your email must be authorized by an existing administrator.
+            To gain administrator access to view and manage alumni
+            registrations, your email must be authorized by an existing
+            administrator.
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -158,7 +239,8 @@ export default function AdminGuard({
       {bootstrapNotice && (
         <div className="bg-emerald-600 text-white px-4 py-2 text-xs text-center font-medium flex items-center justify-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
-          First-time setup: Your account ({user.email}) has been provisioned as the initial Super Administrator in Firestore!
+          First-time setup: Your account ({user.email}) has been provisioned as
+          the initial Super Administrator in Firestore!
         </div>
       )}
 
@@ -194,47 +276,10 @@ export default function AdminGuard({
               </Link>
             </div>
 
-            {/* Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1 text-xs font-semibold">
-              <Link
-                href="/admin"
-                className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/admin/sanjh-2026/registeristration"
-                className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
-              >
-                Sanjh Registrations
-              </Link>
-              <Link
-                href="/admin/performers"
-                className="px-3 py-2 rounded-xl text-amber-800 hover:bg-amber-50 hover:text-amber-950 transition-colors font-bold flex items-center gap-1.5"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                <span>Stage Performers</span>
-              </Link>
-              <Link
-                href="/admin/alumni-registrations"
-                className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
-              >
-                Alumni Directory
-              </Link>
-              <Link
-                href="/admin/admins"
-                className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
-              >
-                Manage Admins & Faculty
-              </Link>
-              <Link
-                href="/admin/razorpay"
-                className="px-3 py-2 rounded-xl text-zinc-700 hover:bg-zinc-100 hover:text-zinc-900 transition-colors flex items-center gap-1.5"
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                <span>Razorpay</span>
-              </Link>
-            </nav>
+            {/* Navigation Links (Strictly 3 Pages) */}
+            <Suspense fallback={<div className="hidden md:flex h-8 w-64" />}>
+              <AdminNavLinks />
+            </Suspense>
 
             {/* User Profile & Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
@@ -266,54 +311,22 @@ export default function AdminGuard({
             </div>
           </div>
 
-          {/* Mobile Navigation bar */}
-          <div className="flex md:hidden overflow-x-auto py-2 border-t border-zinc-100 gap-1 text-[11px] font-semibold">
-            <Link
-              href="/admin"
-              className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/admin/sanjh-2026/registeristration"
-              className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0"
-            >
-              Registrations
-            </Link>
-            <Link
-              href="/admin/performers"
-              className="px-2.5 py-1 rounded-lg text-amber-800 font-bold hover:bg-amber-50 shrink-0 flex items-center gap-1"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              Performers
-            </Link>
-            <Link
-              href="/admin/admins"
-              className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0"
-            >
-              Admins / Faculty
-            </Link>
-            <Link
-              href="/admin/razorpay"
-              className="px-2.5 py-1 rounded-lg text-zinc-700 hover:bg-zinc-100 shrink-0 flex items-center gap-1"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              Razorpay
-            </Link>
-          </div>
+          {/* Mobile Navigation bar (Strictly 3 Pages) */}
+          <Suspense fallback={<div className="flex md:hidden h-8" />}>
+            <MobileAdminNavLinks />
+          </Suspense>
         </div>
       </header>
 
       {/* Main Admin Content Shell */}
-      <main className="flex-1">
-        {children}
-      </main>
+      <main className="flex-1">{children}</main>
 
       {/* Dedicated Admin Footer */}
       <footer className="bg-white border-t border-zinc-200 py-6 px-4 sm:px-6 lg:px-8 text-center text-xs text-zinc-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
-            Shaheed Bhagat Singh State University • Alumni Association Administration
+            Shaheed Bhagat Singh State University • Alumni Association
+            Administration
           </span>
           <span className="text-[11px]">
             Restricted Access • Logged session for {user.email}

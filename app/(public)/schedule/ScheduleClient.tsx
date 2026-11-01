@@ -31,7 +31,15 @@ interface ScheduleItem {
   time: string;
   activity: string;
   dignitaries?: string;
-  category: "ceremony" | "speech" | "dance" | "music" | "alumni" | "memories" | "comedy" | "dinner";
+  category:
+    | "ceremony"
+    | "speech"
+    | "dance"
+    | "music"
+    | "alumni"
+    | "memories"
+    | "comedy"
+    | "dinner";
   highlight?: boolean;
 }
 
@@ -104,7 +112,7 @@ const PROGRAMME_ITEMS: ScheduleItem[] = [
   {
     srNo: 11,
     time: "06:05 PM",
-    activity: "Sharing Memories/Views of SBSEC/SBSSTC/SBSSU",
+    activity: "Sharing Memories/Views of SBSCET/SBSSTC/SBSSU",
     category: "memories",
     highlight: true,
   },
@@ -117,7 +125,7 @@ const PROGRAMME_ITEMS: ScheduleItem[] = [
   {
     srNo: 13,
     time: "06:15 PM",
-    activity: "Sharing Memories/Views of SBSEC/SBSSTC/SBSSU",
+    activity: "Sharing Memories/Views of SBSCET/SBSSTC/SBSSU",
     category: "memories",
     highlight: true,
   },
@@ -221,7 +229,8 @@ export default function ScheduleClient() {
 
       const matchesCat =
         activeCategory === "all" ||
-        (activeCategory === "ceremony" && (item.category === "ceremony" || item.category === "speech")) ||
+        (activeCategory === "ceremony" &&
+          (item.category === "ceremony" || item.category === "speech")) ||
         item.category === activeCategory;
 
       return matchesSearch && matchesCat;
@@ -319,7 +328,8 @@ export default function ScheduleClient() {
               1st Alumni Meet 2026
             </h1>
             <p className="text-sm sm:text-lg text-orange-50 font-medium">
-              Tentative Minute-to-Minute Programme • Sanjh 2026 Cultural Extravaganza
+              Tentative Minute-to-Minute Programme • Sanjh 2026 Cultural
+              Extravaganza
             </p>
           </div>
 
@@ -382,7 +392,9 @@ export default function ScheduleClient() {
               Hon’ble Vice Chancellor, Dr. Suresh Kumar Sharma
             </h3>
             <p className="text-xs text-zinc-600 leading-relaxed">
-              Delivering the Inaugural Keynote at <strong>05:15 PM</strong>, followed by a dedicated interactive dialogue with alumni across all batches (SBSCET, SBSSTC, SBSSU) at <strong>08:15 PM</strong>.
+              Delivering the Inaugural Keynote at <strong>05:15 PM</strong>,
+              followed by a dedicated interactive dialogue with alumni across
+              all batches (SBSCET, SBSSTC, SBSSU) at <strong>08:15 PM</strong>.
             </p>
           </div>
 
@@ -395,7 +407,9 @@ export default function ScheduleClient() {
               Dr. Gazalpreet Arneja, ME
             </h3>
             <p className="text-xs text-zinc-600 leading-relaxed">
-              Welcoming back alumni delegates, distinguished faculty members, and student performers at <strong>05:10 PM</strong> to open the 1st Alumni Meet celebrations.
+              Welcoming back alumni delegates, distinguished faculty members,
+              and student performers at <strong>05:10 PM</strong> to open the
+              1st Alumni Meet celebrations.
             </p>
           </div>
         </div>
@@ -467,7 +481,8 @@ export default function ScheduleClient() {
 
           <div className="flex items-center justify-between text-[11px] text-zinc-500 border-t border-zinc-100 pt-3">
             <span>
-              Showing <strong>{filteredItems.length}</strong> of {PROGRAMME_ITEMS.length} programme events
+              Showing <strong>{filteredItems.length}</strong> of{" "}
+              {PROGRAMME_ITEMS.length} programme events
             </span>
             {(search || activeCategory !== "all") && (
               <button
@@ -489,9 +504,12 @@ export default function ScheduleClient() {
             {filteredItems.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-zinc-200 space-y-2">
                 <Search className="w-8 h-8 text-zinc-300 mx-auto" />
-                <h3 className="font-bold text-zinc-700 text-sm">No schedule events found</h3>
+                <h3 className="font-bold text-zinc-700 text-sm">
+                  No schedule events found
+                </h3>
                 <p className="text-xs text-zinc-400">
-                  Try adjusting your search keyword or clearing the category filter.
+                  Try adjusting your search keyword or clearing the category
+                  filter.
                 </p>
               </div>
             ) : (
@@ -531,7 +549,7 @@ export default function ScheduleClient() {
 
                             <span
                               className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md border ${getBadgeStyle(
-                                item.category
+                                item.category,
                               )}`}
                             >
                               {getCategoryLabel(item.category)}
@@ -573,7 +591,8 @@ export default function ScheduleClient() {
                   Official Minute-to-Minute Programme Table
                 </h2>
                 <p className="text-xs text-zinc-500">
-                  Shaheed Bhagat Singh State University, Ferozepur • 1st Alumni Meet 2026
+                  Shaheed Bhagat Singh State University, Ferozepur • 1st Alumni
+                  Meet 2026
                 </p>
               </div>
 
@@ -634,14 +653,28 @@ export default function ScheduleClient() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-zinc-600 leading-relaxed">
             <ul className="space-y-1.5 list-disc list-inside">
-              <li>Please arrive by <strong>04:30 PM</strong> for registration confirmation and souvenir kit collection.</li>
-              <li>Alumni performing in designated slots are requested to report to the stage coordinator by <strong>04:45 PM</strong>.</li>
-              <li>Participation certificates will be awarded to all alumni and student cultural function performers.</li>
+              <li>
+                Please arrive by <strong>04:30 PM</strong> for registration
+                confirmation and souvenir kit collection.
+              </li>
+              <li>
+                Alumni performing in designated slots are requested to report to
+                the stage coordinator by <strong>04:45 PM</strong>.
+              </li>
+              {/* <li>Participation certificates will be awarded to all alumni and student cultural function performers.</li> */}
             </ul>
             <ul className="space-y-1.5 list-disc list-inside">
-              <li>Hon’ble Vice-Chancellor will host an open-floor alumni interaction session at <strong>08:15 PM</strong>.</li>
-              <li>Gala Dinner will be served in the campus lawns at <strong>08:45 PM</strong>.</li>
-              <li>Schedule is tentative and subject to minor adjustments on stage.</li>
+              <li>
+                Hon’ble Vice-Chancellor will host an open-floor alumni
+                interaction session at <strong>08:15 PM</strong>.
+              </li>
+              <li>
+                Gala Dinner will be served in the campus lawns at{" "}
+                <strong>08:45 PM</strong>.
+              </li>
+              <li>
+                Schedule is tentative and subject to minor adjustments on stage.
+              </li>
             </ul>
           </div>
         </div>
@@ -653,7 +686,9 @@ export default function ScheduleClient() {
               Ready to Join Sanjh 2026?
             </h2>
             <p className="text-xs sm:text-sm text-orange-100 max-w-xl">
-              Confirm your registration for the 1st Alumni Meet. Passes include admission, auditorium seating, gala dinner, and official souvenir kit.
+              Confirm your registration for the 1st Alumni Meet. Passes include
+              admission, auditorium seating, gala dinner, and official souvenir
+              kit.
             </p>
           </div>
 

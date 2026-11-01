@@ -76,26 +76,93 @@ export async function createAlumniRegistration(
       }
     }
 
+    // Extract and flatten guests (up to 3, Mom/Dad/Spouse/Child)
+    const guest1Name = input.guest1Name?.trim() || (validatedGuests[0]?.name || "");
+    const guest1Relation = input.guest1Relation || (validatedGuests[0]?.relation || "");
+    const guest2Name = input.guest2Name?.trim() || (validatedGuests[1]?.name || "");
+    const guest2Relation = input.guest2Relation || (validatedGuests[1]?.relation || "");
+    const guest3Name = input.guest3Name?.trim() || (validatedGuests[2]?.name || "");
+    const guest3Relation = input.guest3Relation || (validatedGuests[2]?.relation || "");
+
+    const guestListStr: string[] = [];
+    if (guest1Name) guestListStr.push(`1. ${guest1Name} (${guest1Relation})`);
+    if (guest2Name) guestListStr.push(`2. ${guest2Name} (${guest2Relation})`);
+    if (guest3Name) guestListStr.push(`3. ${guest3Name} (${guest3Relation})`);
+    const guestsSummary = guestListStr.join(", ");
+    const guestCountStr = String(guestListStr.length);
+
+    // Stage Performance Request
+    const wantToPerform = Boolean(isAttending && input.wantToPerform);
+    const performanceType = wantToPerform ? (input.performanceType?.trim() || "") : "";
+    const performanceStatus = wantToPerform ? "pending" : "none";
+
+    // Vice Chancellor Interaction Request
+    const wantToInteractWithVC = Boolean(isAttending && input.wantToInteractWithVC);
+    const vcInteractionPortfolio = wantToInteractWithVC ? (input.vcInteractionPortfolio?.trim() || "") : "";
+    const vcInteractionReason = wantToInteractWithVC ? (input.vcInteractionReason?.trim() || "") : "";
+    const vcInteractionStatus = wantToInteractWithVC ? "pending" : "none";
+
+    // Special Request (Default "")
+    const specialRequest = input.specialRequest?.trim() || "";
+
     const registrationData: Omit<AlumniRegistration, "id"> = {
-      ...input,
-      email: input.email.trim().toLowerCase(),
       fullName: input.fullName.trim(),
+      email: input.email.trim().toLowerCase(),
+      phone: input.phone?.trim() || "",
+      whatsapp: input.whatsapp?.trim() || input.phone?.trim() || "",
+
+      era: input.era || "SBSSU",
+      degree: input.degree || "",
+      branch: input.branch || "",
+      passingYear: input.passingYear || "",
+      rollNumber: input.rollNumber?.trim() || "",
+      currentDesignation: input.currentDesignation?.trim() || "",
+      organization: input.organization?.trim() || "",
+      city: input.city?.trim() || "",
+      state: input.state?.trim() || "",
+      country: input.country?.trim() || "India",
+      linkedin: input.linkedin?.trim() || "",
+      memoriesMessage: input.memoriesMessage?.trim() || "",
+
       regNumber,
       attendingMeet: isAttending,
-      // Accompanying guests
-      guestCount: validatedGuests.length,
-      guests: validatedGuests,
-      // Registration is Free
-      amount: 0,
-      paymentStatus: "free",
-      // Pass is separate - initially not acquired
+      attendanceType: isAttending ? "in-person" : "supporting",
       hasPass: false,
       passStatus: "none",
-      passPrice: 1000,
-      paymentDetails: null,
+      amount: isAttending ? "1000" : "0",
+
+      specialRequest,
+
+      guestCount: guestCountStr,
+      guest1Name,
+      guest1Relation,
+      guest2Name,
+      guest2Relation,
+      guest3Name,
+      guest3Relation,
+      guestsSummary,
+
+      wantToPerform,
+      performanceType,
+      performanceStatus,
+      performanceAdminRemarks: "",
+
+      wantToInteractWithVC,
+      vcInteractionPortfolio,
+      vcInteractionReason,
+      vcInteractionStatus,
+      vcInteractionAdminRemarks: "",
+
+      paymentMode: isAttending ? "UPI_QR" : "",
+      txnId: input.txnId?.trim() || "",
+      screenshotUrl: input.screenshotUrl || "",
+      verified: false,
+      verifiedBy: "",
+      verifiedAt: "",
+
       checkedIn: false,
-      // Stage performance default: attendee only
-      performerStatus: "none",
+      checkedInAt: "",
+      checkedInBy: "",
       createdAt: now,
       updatedAt: now,
     };
@@ -177,7 +244,7 @@ export async function getAlumniRegistrationById(
           data?.paymentDetails?.screenshotUrl ||
           "",
         ...data,
-      } as AlumniRegistration,
+      } as unknown as AlumniRegistration,
     };
   } catch (error: any) {
     console.error("Error fetching registration by ID:", error);
@@ -239,7 +306,7 @@ export async function verifyRegistrationCode(
             passPrice: data?.passPrice || 1000,
             performerStatus: data?.performerStatus || "none",
             ...data,
-          } as AlumniRegistration,
+          } as unknown as AlumniRegistration,
         };
       }
     } catch {
@@ -272,7 +339,7 @@ export async function verifyRegistrationCode(
           passPrice: data?.passPrice || 1000,
           performerStatus: data?.performerStatus || "none",
           ...data,
-        } as AlumniRegistration,
+        } as unknown as AlumniRegistration,
       };
     }
 
@@ -301,7 +368,7 @@ export async function verifyRegistrationCode(
           passPrice: data?.passPrice || 1000,
           performerStatus: data?.performerStatus || "none",
           ...data,
-        } as AlumniRegistration,
+        } as unknown as AlumniRegistration,
       };
     }
 
@@ -401,7 +468,7 @@ export async function getAlumniRegistrationByEmail(email: string): Promise<{
         passPrice: data?.passPrice || 1000,
         performerStatus: data?.performerStatus || "none",
         ...data,
-      } as AlumniRegistration,
+      } as unknown as AlumniRegistration,
     };
   } catch (error: any) {
     console.error("Error fetching registration by email:", error);
@@ -481,9 +548,9 @@ export async function submitUpiPayment({
         verified: false,
         screenshotUrl: screenshotUrl.trim(),
         paymentScreenshotUrl: screenshotUrl.trim(),
-        amount: 1000,
+        amount: "1000",
         paymentStatus: "pending",
-      } as AlumniRegistration;
+      } as unknown as AlumniRegistration;
 
       const emailTemplate = getPaymentSubmittedEmailTemplate(updatedReg);
       await sendMail({
@@ -684,7 +751,7 @@ export async function getAllRegistrations(): Promise<{
           data?.paymentDetails?.screenshotUrl ||
           "",
         ...data,
-      } as AlumniRegistration);
+      } as unknown as AlumniRegistration);
     });
 
     return { success: true, data: registrations };
@@ -776,3 +843,103 @@ export async function getRegistrationStats(): Promise<{
     };
   }
 }
+
+/**
+ * Update any registration fields (for admin editing)
+ */
+export async function updateRegistrationDetails(
+  id: string,
+  updates: Partial<AlumniRegistration>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+
+    const docRef = db.collection(collectionName).doc(id);
+    const docSnap = await docRef.get();
+    if (!docSnap.exists) {
+      return { success: false, error: "Record not found" };
+    }
+
+    const now = new Date().toISOString();
+    const cleanUpdates: Record<string, any> = {
+      ...updates,
+      updatedAt: now,
+    };
+    // Don't allow changing ID
+    delete cleanUpdates.id;
+
+    // Keep guestsSummary updated if guest names changed
+    if (
+      cleanUpdates.guest1Name !== undefined ||
+      cleanUpdates.guest2Name !== undefined ||
+      cleanUpdates.guest3Name !== undefined
+    ) {
+      const g1 = cleanUpdates.guest1Name ?? docSnap.data()?.guest1Name ?? "";
+      const r1 = cleanUpdates.guest1Relation ?? docSnap.data()?.guest1Relation ?? "";
+      const g2 = cleanUpdates.guest2Name ?? docSnap.data()?.guest2Name ?? "";
+      const r2 = cleanUpdates.guest2Relation ?? docSnap.data()?.guest2Relation ?? "";
+      const g3 = cleanUpdates.guest3Name ?? docSnap.data()?.guest3Name ?? "";
+      const r3 = cleanUpdates.guest3Relation ?? docSnap.data()?.guest3Relation ?? "";
+
+      const gList: string[] = [];
+      if (g1) gList.push(`1. ${g1} (${r1})`);
+      if (g2) gList.push(`2. ${g2} (${r2})`);
+      if (g3) gList.push(`3. ${g3} (${r3})`);
+      cleanUpdates.guestsSummary = gList.join(", ");
+      cleanUpdates.guestCount = String(gList.length);
+    }
+
+    await docRef.update(cleanUpdates);
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error updating registration:", err);
+    return { success: false, error: err?.message || "Failed to update registration" };
+  }
+}
+
+/**
+ * Update stage performance approval status
+ */
+export async function updatePerformanceStatus(
+  id: string,
+  status: "pending" | "approved" | "rejected" | "none",
+  remarks: string = ""
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+    const docRef = db.collection(collectionName).doc(id);
+    await docRef.update({
+      performanceStatus: status,
+      performanceAdminRemarks: remarks,
+      updatedAt: new Date().toISOString(),
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error updating performance status:", err);
+    return { success: false, error: err?.message || "Failed to update performance status" };
+  }
+}
+
+/**
+ * Update Vice Chancellor interaction approval status
+ */
+export async function updateVCInteractionStatus(
+  id: string,
+  status: "pending" | "approved" | "rejected" | "none",
+  remarks: string = ""
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) return { success: false, error: "Registration ID is required" };
+    const docRef = db.collection(collectionName).doc(id);
+    await docRef.update({
+      vcInteractionStatus: status,
+      vcInteractionAdminRemarks: remarks,
+      updatedAt: new Date().toISOString(),
+    });
+    return { success: true };
+  } catch (err: any) {
+    console.error("Error updating VC interaction status:", err);
+    return { success: false, error: err?.message || "Failed to update VC interaction status" };
+  }
+}
+

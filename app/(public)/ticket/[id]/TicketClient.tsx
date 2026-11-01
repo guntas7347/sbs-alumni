@@ -40,7 +40,9 @@ export default function TicketClient({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [registration, setRegistration] = useState<AlumniRegistration | null>(null);
+  const [registration, setRegistration] = useState<AlumniRegistration | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,7 +85,9 @@ export default function TicketClient({
     setAppSuccess(null);
 
     if (!title || !description || !resumeUrl) {
-      setAppError("Please fill in Act Title, Description, and a valid Resume/Video URL.");
+      setAppError(
+        "Please fill in Act Title, Description, and a valid Resume/Video URL.",
+      );
       return;
     }
 
@@ -99,7 +103,9 @@ export default function TicketClient({
       });
 
       if (res.success) {
-        setAppSuccess("Your performance application has been submitted to the university admin for review!");
+        setAppSuccess(
+          "Your performance application has been submitted to the university admin for review!",
+        );
         setShowPerformerForm(false);
         fetchRecord();
       } else {
@@ -116,7 +122,9 @@ export default function TicketClient({
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
-        <p className="text-sm text-zinc-500 font-medium">Loading your alumni pass record...</p>
+        <p className="text-sm text-zinc-500 font-medium">
+          Loading your alumni pass record...
+        </p>
       </div>
     );
   }
@@ -140,10 +148,13 @@ export default function TicketClient({
   const hasPass = Boolean(
     registration.hasPass ||
     registration.passStatus === "active" ||
-    registration.paymentStatus === "completed"
+    registration.paymentStatus === "completed",
   );
 
-  const performerStatus = registration.performerStatus || registration.performanceApplication?.status || "none";
+  const performerStatus =
+    registration.performerStatus ||
+    registration.performanceApplication?.status ||
+    "none";
   const perf = registration.performanceApplication;
 
   return (
@@ -170,7 +181,7 @@ export default function TicketClient({
 
           {!hasPass && (
             <Link
-              href={`/payment/${registration.id}`}
+              href={`/sanjh-2026/payment/${registration.id}`}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-all shadow-xs"
             >
               <Ticket className="w-4 h-4" />
@@ -195,14 +206,20 @@ export default function TicketClient({
                 You do not currently have an active Event Pass for Sanjh 2026
               </h2>
               <p className="text-xs text-zinc-600 leading-relaxed">
-                Your details are registered with the university database. If you plan to attend the <strong>1st Alumni Meet & Sanjh 2026</strong> in-person on campus on <strong>November 14, 2026</strong>, you must purchase an official <strong>Event Pass (₹1,000)</strong>. The pass includes gala dinner, high tea, souvenir kit, auditorium seating, and eligibility to apply to perform on stage!
+                Your details are registered with the university database. If you
+                plan to attend the <strong>1st Alumni Meet & Sanjh 2026</strong>{" "}
+                in-person on campus on <strong>November 14, 2026</strong>, you
+                must purchase an official <strong>Event Pass (₹1,000)</strong>.
+                The pass includes gala dinner, high tea, souvenir kit,
+                auditorium seating, and eligibility to apply to perform on
+                stage!
               </p>
             </div>
           </div>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
             <Link
-              href={`/payment/${registration.id}`}
+              href={`/sanjh-2026/payment/${registration.id}`}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shadow-xs"
             >
               <Ticket className="w-4 h-4" />
@@ -230,13 +247,17 @@ export default function TicketClient({
               </div>
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-orange-200 block">
-                  {hasPass ? "Official Event Entry Pass" : "Registered Alumni Record"} • alumni.sbssu.ac.in
+                  {hasPass
+                    ? "Official Event Entry Pass"
+                    : "Registered Alumni Record"}{" "}
+                  • alumni.sbssu.ac.in
                 </span>
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight">
                   1st Alumni Meet & Sanjh 2026
                 </h1>
                 <p className="text-xs text-orange-100">
-                  Shaheed Bhagat Singh State University (SBSCET • SBSSTC • SBSSU)
+                  Shaheed Bhagat Singh State University (SBSCET • SBSSTC •
+                  SBSSU)
                 </p>
               </div>
             </div>
@@ -249,7 +270,9 @@ export default function TicketClient({
                     : "bg-black/30 backdrop-blur-md text-amber-200"
                 }`}
               >
-                {hasPass ? "✓ Verified Meet Pass (₹1,000)" : "Alumni Registered (No Pass)"}
+                {hasPass
+                  ? "✓ Verified Meet Pass (₹1,000)"
+                  : "Alumni Registered (No Pass)"}
               </span>
               <div className="text-[11px] font-mono font-bold text-amber-200 mt-1">
                 {registration.regNumber}
@@ -279,7 +302,9 @@ export default function TicketClient({
                   Stage Performance Approved: {perf?.title || "Cultural Act"}
                 </h3>
                 <p className="text-xs text-emerald-100">
-                  Category: <strong>{perf?.category || "Cultural"}</strong>. Please report to the SECA stage coordinator at <strong>4:30 PM</strong> at the main auditorium. 📜 Official Participation Certificate guaranteed!
+                  Category: <strong>{perf?.category || "Cultural"}</strong>.
+                  Please report to the SECA stage coordinator at{" "}
+                  <strong>4:30 PM</strong> at the main auditorium.
                 </p>
                 {perf?.adminRemarks && (
                   <p className="text-xs bg-black/15 p-2 rounded-lg italic mt-1">
@@ -298,7 +323,10 @@ export default function TicketClient({
                   Stage Performance Request Under Admin Review
                 </strong>
                 <p className="text-zinc-600 mt-0.5">
-                  Your act <strong>&ldquo;{perf?.title}&rdquo;</strong> ({perf?.category}) is currently being reviewed by the university SECA committee. You will see an update here once approved.
+                  Your act <strong>&ldquo;{perf?.title}&rdquo;</strong> (
+                  {perf?.category}) is currently being reviewed by the
+                  university SECA committee. You will see an update here once
+                  approved.
                 </p>
               </div>
             </div>
@@ -308,7 +336,9 @@ export default function TicketClient({
             <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-zinc-700 text-xs flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600" />
               <span>
-                Pass Status: <strong>Honored Delegate & Attendee</strong>. Stage request reviewed{perf?.adminRemarks ? `: "${perf.adminRemarks}"` : "."}
+                Pass Status: <strong>Honored Delegate & Attendee</strong>. Stage
+                request reviewed
+                {perf?.adminRemarks ? `: "${perf.adminRemarks}"` : "."}
               </span>
             </div>
           )}
@@ -338,7 +368,10 @@ export default function TicketClient({
               </div>
               {registration.currentDesignation && (
                 <div className="text-xs text-zinc-500">
-                  {registration.currentDesignation} {registration.organization ? `at ${registration.organization}` : ""}
+                  {registration.currentDesignation}{" "}
+                  {registration.organization
+                    ? `at ${registration.organization}`
+                    : ""}
                 </div>
               )}
             </div>
@@ -377,9 +410,12 @@ export default function TicketClient({
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-orange-950 flex items-center gap-1.5">
                   <Users className="w-3.5 h-3.5 text-orange-600" />
-                  Accompanying Family Guests ({registration.guests.length} / Max 3)
+                  Accompanying Family Guests ({registration.guests.length} / Max
+                  3)
                 </span>
-                <span className="text-[10px] text-zinc-500 font-medium">Mom, Dad, Spouse, Child</span>
+                <span className="text-[10px] text-zinc-500 font-medium">
+                  Mom, Dad, Spouse, Child
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {registration.guests.map((g, idx) => (
@@ -410,13 +446,18 @@ export default function TicketClient({
                   {registration.regNumber}
                 </div>
                 <div className="text-[11px] text-zinc-500">
-                  Present this barcode at the registration desk for badge collection, dinner coupon, and check-in.
+                  Present this barcode at the registration desk for badge
+                  collection, dinner coupon, and check-in.
                 </div>
               </div>
 
               {/* Scannable Barcode */}
               <div className="flex flex-col items-center p-3 rounded-2xl border border-zinc-200 bg-white shadow-2xs">
-                <Barcode value={registration.regNumber} width={1.8} height={48} />
+                <Barcode
+                  value={registration.regNumber}
+                  width={1.8}
+                  height={48}
+                />
                 <span className="text-[9px] font-mono text-zinc-400 mt-0.5 tracking-wider">
                   SANJH 2026 ACTIVE GATE PASS
                 </span>
@@ -424,7 +465,8 @@ export default function TicketClient({
             </div>
           ) : (
             <div className="pt-4 border-t border-zinc-100 p-4 rounded-2xl bg-zinc-50 text-center text-xs text-zinc-500">
-              Pass barcode will be activated upon purchase of the ₹1,000 Event Pass.
+              Pass barcode will be activated upon purchase of the ₹1,000 Event
+              Pass.
             </div>
           )}
         </div>
@@ -443,7 +485,8 @@ export default function TicketClient({
                   Want to Perform on Stage at Sanjh 2026?
                 </h3>
                 <p className="text-xs text-zinc-500">
-                  Default: All pass holders are attendees. If you wish to showcase your talent, apply below.
+                  Default: All pass holders are attendees. If you wish to
+                  showcase your talent, apply below.
                 </p>
               </div>
             </div>
@@ -485,36 +528,53 @@ export default function TicketClient({
               onSubmit={handlePerformanceSubmit}
               className="pt-4 border-t border-zinc-100 space-y-4 animate-in fade-in duration-200"
             >
-              <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center gap-2">
+              {/* <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center gap-2">
                 <Award className="w-4 h-4 text-emerald-700 shrink-0" />
                 <span>
-                  📜 <strong>Participation Certificates:</strong> Official certificates awarded to all approved alumni performers!
+                  📜 <strong>Participation Certificates:</strong> Official
+                  certificates awarded to all approved alumni performers!
                 </span>
-              </div>
+              </div> */}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                    Performance Domain / Category <span className="text-orange-600">*</span>
+                    Performance Domain / Category{" "}
+                    <span className="text-orange-600">*</span>
                   </label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                   >
-                    <option value="Music & Singing">Music & Vocals (Solo / Duet)</option>
-                    <option value="Folk Dance (Bhangra / Giddha)">Folk Dance (Bhangra / Giddha / Solo)</option>
-                    <option value="Live Band / Instrumental">Instrumental / Band Performance</option>
-                    <option value="Stand-up Comedy / Shayari / Poetry">Stand-up Comedy / Shayari / Poetry</option>
-                    <option value="Drama / Skit / Mimicry">Drama / Skit / Mimicry</option>
-                    <option value="Anchoring & Stage Hosting">Anchoring & Stage Hosting</option>
-                    <option value="Special Alumni Showcase">Special Alumni Showcase</option>
+                    <option value="Music & Singing">
+                      Music & Vocals (Solo / Duet)
+                    </option>
+                    <option value="Folk Dance (Bhangra / Giddha)">
+                      Folk Dance (Bhangra / Giddha / Solo)
+                    </option>
+                    <option value="Live Band / Instrumental">
+                      Instrumental / Band Performance
+                    </option>
+                    <option value="Stand-up Comedy / Shayari / Poetry">
+                      Stand-up Comedy / Shayari / Poetry
+                    </option>
+                    <option value="Drama / Skit / Mimicry">
+                      Drama / Skit / Mimicry
+                    </option>
+                    <option value="Anchoring & Stage Hosting">
+                      Anchoring & Stage Hosting
+                    </option>
+                    <option value="Special Alumni Showcase">
+                      Special Alumni Showcase
+                    </option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                    Act / Song / Presentation Title <span className="text-orange-600">*</span>
+                    Act / Song / Presentation Title{" "}
+                    <span className="text-orange-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -529,7 +589,8 @@ export default function TicketClient({
 
               <div>
                 <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                  What do you plan to perform? (Description & Team members if any) <span className="text-orange-600">*</span>
+                  What do you plan to perform? (Description & Team members if
+                  any) <span className="text-orange-600">*</span>
                 </label>
                 <textarea
                   rows={3}
@@ -544,7 +605,8 @@ export default function TicketClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                    Resume / Portfolio / Video Audition URL <span className="text-orange-600">*</span>
+                    Resume / Portfolio / Video Audition URL{" "}
+                    <span className="text-orange-600">*</span>
                   </label>
                   <input
                     type="url"
@@ -555,7 +617,8 @@ export default function TicketClient({
                     className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                   />
                   <span className="text-[10px] text-zinc-400 mt-0.5 block">
-                    Link to your past performance, singing clip, or artistic resume.
+                    Link to your past performance, singing clip, or artistic
+                    resume.
                   </span>
                 </div>
 

@@ -76,10 +76,6 @@ export async function sendMail({
       html,
     });
 
-    console.log(
-      `[Nodemailer] Email sent successfully to ${to} (Message ID: ${info.messageId})`,
-    );
-
     return {
       success: true,
       messageId: info.messageId,

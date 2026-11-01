@@ -18,7 +18,7 @@ export function getRegistrationEmailTemplate(
   html: string;
   text: string;
 } {
-  const paymentLink = `${APP_URL}/payment/${registration.id}`;
+  const paymentLink = `${APP_URL}/sanjh-2026/payment/${registration.id}`;
   const profileLink = `${APP_URL}/sanjh-2026/pass/${registration.id}`;
 
   const subject = `Welcome to SBSSU Alumni Association – Registration Confirmed (${registration.regNumber})`;
@@ -434,18 +434,18 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                 • Admission badge and reserved seating in Main University Auditorium<br>
                 • High Tea, Souvenir Kit, and Grand Gala Dinner<br>
                 • Eligible to apply to perform on stage during the Sanjh 2026 Cultural Function<br>
-                • Official Participation Certificate for performers
               </div>
 
               ${
-                registration.performerStatus === "approved"
+                registration.performerStatus === "approved" ||
+                registration.performanceStatus === "approved"
                   ? `
               <div style="background: linear-gradient(135deg, #059669 0%, #0d9488 100%); color: #ffffff; border-radius: 14px; padding: 16px; margin-bottom: 24px; text-align: center;">
                 <div style="font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #a7f3d0;">
                   ★ APPROVED STAGE PERFORMER
                 </div>
                 <div style="font-size: 15px; font-weight: 900; margin-top: 4px;">
-                  ${registration.performanceApplication?.title || "Cultural Act"} (${registration.performanceApplication?.category || "Stage Performance"})
+                  ${registration.performanceType || registration.performanceApplication?.title || "Cultural Act"}
                 </div>
                 <div style="font-size: 12px; color: #ecfdf5; margin-top: 4px;">
                   Please report to the SECA Stage Coordinator at 4:30 PM for sound check.

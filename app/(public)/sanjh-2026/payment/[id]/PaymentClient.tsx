@@ -41,6 +41,8 @@ export default function PaymentClient({
     null,
   );
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
 
   // Form state
@@ -72,7 +74,7 @@ export default function PaymentClient({
   useEffect(() => {
     fetchRecord();
 
-    generateUpiQR("Alumni Meet - Sanjh 2026", id)
+    generateUpiQR(id)
       .then(({ qrImage, uri }) => {
         setQrImage(qrImage);
         setQrUri(uri);
@@ -109,6 +111,7 @@ export default function PaymentClient({
     if (!registration) return;
 
     setError(null);
+    setUploading(true);
 
     const cleanTxnId = txnId.trim();
     if (!cleanTxnId) {
@@ -174,6 +177,7 @@ export default function PaymentClient({
       );
     } finally {
       setSubmitting(false);
+      setUploading(false);
     }
   };
 
@@ -211,6 +215,17 @@ export default function PaymentClient({
     registration.verified === true ||
     (registration.hasPass === true && registration.verified !== false),
   );
+
+  if (uploading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
+        <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
+        <p className="text-sm text-zinc-500 font-medium">
+          Uploading payment and registration details...
+        </p>
+      </div>
+    );
+  }
 
   if (isVerified) {
     return (

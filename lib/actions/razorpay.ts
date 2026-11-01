@@ -63,7 +63,7 @@ export async function createRazorpayOrderAction(registrationId: string): Promise
     }
 
     const reg = regRes.data;
-    const amountInINR = reg.amount || 1000;
+    const amountInINR = Number(reg.amount) || 1000;
     const amountInPaise = Math.round(amountInINR * 100);
 
     // Sanitize receipt to alphanumeric & underscore (max 40 chars)

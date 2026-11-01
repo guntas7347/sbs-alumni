@@ -16,7 +16,7 @@ import {
 export const metadata = {
   title: "Sanjh 2026 – SECA Annual Cultural Function | SBSSU Alumni Meet",
   description:
-    "Join Sanjh 2026 organized by SECA at Shaheed Bhagat Singh State University on November 14, 2026, at 5:00 PM. Participation Certificates for all participants!",
+    "Join Sanjh 2026 organized by SECA at Shaheed Bhagat Singh State University on November 14, 2026, at 5:00 PM.",
 };
 
 export default function Sanjh2026Page() {
@@ -59,39 +59,6 @@ export default function Sanjh2026Page() {
     },
   ];
 
-  const scheduleEvents = [
-    {
-      time: "04:30 PM",
-      title: "Alumni Welcome & Red Carpet Reception",
-      desc: "Arrival of alumni and guests, badge collection, complimentary tea, and souvenir kit distribution.",
-    },
-    {
-      time: "05:00 PM",
-      title: "Inaugural Ceremony & Lamp Lighting",
-      desc: "Traditional lighting of the lamp by Honorable Vice Chancellor Dr. Suresh Kumar Sharma and SECA faculty conveners.",
-    },
-    {
-      time: "05:30 PM",
-      title: "Alumni Felicitations & Nostalgia Slide Show",
-      desc: "Special honors for pioneer batches (1995-1999) and key milestone batches celebrating Silver & Decade reunions.",
-    },
-    {
-      time: "06:15 PM",
-      title: "SECA Cultural Stage Extravaganza",
-      desc: "Showcase of dance, live music, comedy skits, and special alumni guest performances.",
-    },
-    {
-      time: "08:15 PM",
-      title: "Grand Folk Bhangra & Campus Lawns Celebration",
-      desc: "Open-floor Punjabi Bhangra and Giddha uniting alumni, students, and faculty.",
-    },
-    {
-      time: "09:00 PM",
-      title: "Gala Dinner, Certificate Distribution & Bonfire",
-      desc: "Buffet gala dinner, informal fireside networking, and award of Participation Certificates.",
-    },
-  ];
-
   return (
     <div className="flex flex-col min-h-screen bg-[#FDFBF7]">
       {/* Header Banner */}
@@ -107,7 +74,8 @@ export default function Sanjh2026Page() {
           </h1>
 
           <p className="text-base sm:text-lg text-orange-100 max-w-3xl mx-auto font-medium">
-            (Alumni Meet 2026 – A Celebration of Togetherness & Nostalgia with Our Alumni)
+            (Alumni Meet 2026 – A Celebration of Togetherness & Nostalgia with
+            Our Alumni)
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4 text-xs font-semibold">
@@ -156,21 +124,33 @@ export default function Sanjh2026Page() {
 
           <div className="space-y-4 text-sm text-zinc-700 leading-relaxed">
             <p>
-              We are thrilled to announce that <strong>SECA (Society for Extracurricular Activities)</strong> is organizing its Annual Cultural Function 2026, <strong>&ldquo;Sanjh 2026&rdquo;</strong>, as a flagship feature of the upcoming Alumni Meet (A Grand Celebration of Togetherness, Memories, and Bonding with Our Alumni)!
+              We are thrilled to announce that{" "}
+              <strong>SECA (Society for Extracurricular Activities)</strong> is
+              organizing its Annual Cultural Function 2026,{" "}
+              <strong>&ldquo;Sanjh 2026&rdquo;</strong>, as a flagship feature
+              of the upcoming Alumni Meet (A Grand Celebration of Togetherness,
+              Memories, and Bonding with Our Alumni)!
             </p>
             <p>
-              Every year, SECA provides this special platform for you to showcase your talent, creativity, and enthusiasm. Whether you graduated in 1999 from SBSCET, in 2015 from SBSSTC, or are currently enrolled at SBSSU, this stage welcomes your artistic spirit.
+              Every year, SECA provides this special platform for you to
+              showcase your talent, creativity, and enthusiasm. Whether you
+              graduated in 1999 from SBSCET, in 2015 from SBSSTC, or are
+              currently enrolled at SBSSU, this stage welcomes your artistic
+              spirit.
             </p>
 
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 font-medium space-y-1">
+            {/* <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-950 font-medium space-y-1">
               <div className="flex items-center gap-2 text-sm font-bold text-emerald-900">
                 <Award className="w-5 h-5 text-emerald-700" />
                 📜 Official Certificate Guarantee:
               </div>
               <p className="text-xs text-emerald-800">
-                Participation Certificates will be awarded to all participants! We encourage maximum participation from all students and alumni. Step forward, highlight your skills, and make this event truly memorable.
+                Participation Certificates will be awarded to all participants!
+                We encourage maximum participation from all students and alumni.
+                Step forward, highlight your skills, and make this event truly
+                memorable.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
@@ -186,7 +166,8 @@ export default function Sanjh2026Page() {
               Showcase Your Energy & Passion
             </h3>
             <p className="text-xs sm:text-sm text-zinc-500">
-              Students and alumni can register individually or in teams for any of the categories below.
+              Students and alumni can register individually or in teams for any
+              of the categories below.
             </p>
           </div>
 
@@ -198,13 +179,15 @@ export default function Sanjh2026Page() {
               >
                 <div className="space-y-3">
                   <div className="text-3xl">{track.icon}</div>
-                  <h4 className="font-bold text-zinc-900 text-base">{track.title}</h4>
+                  <h4 className="font-bold text-zinc-900 text-base">
+                    {track.title}
+                  </h4>
                   <p className="text-xs text-zinc-600 leading-relaxed">
                     {track.description}
                   </p>
                 </div>
                 <div className="pt-4 mt-4 border-t border-orange-100 flex items-center justify-between text-xs text-orange-700 font-semibold">
-                  <span>Certificate Eligible</span>
+                  {/* <span>Certificate Eligible</span> */}
                   <span>Open for Registration</span>
                 </div>
               </div>
@@ -222,32 +205,6 @@ export default function Sanjh2026Page() {
           <h3 className="text-2xl sm:text-3xl font-extrabold text-zinc-900">
             Sanjh 2026 Schedule • November 14, 2026
           </h3>
-        </div>
-
-        <div className="space-y-4">
-          {scheduleEvents.map((evt, idx) => (
-            <div
-              key={idx}
-              className="bg-white rounded-2xl border border-zinc-200 p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xs hover:border-orange-300 transition-all"
-            >
-              <div className="flex items-center gap-3">
-                <span className="shrink-0 px-3 py-1.5 rounded-lg bg-orange-100 text-orange-900 font-bold text-xs">
-                  {evt.time}
-                </span>
-                <div>
-                  <h4 className="font-bold text-zinc-900 text-sm sm:text-base">
-                    {evt.title}
-                  </h4>
-                  <p className="text-xs text-zinc-500 mt-0.5">{evt.desc}</p>
-                </div>
-              </div>
-              <div className="shrink-0">
-                <span className="text-[11px] font-medium text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-                  Confirmed
-                </span>
-              </div>
-            </div>
-          ))}
         </div>
 
         {/* CTA */}

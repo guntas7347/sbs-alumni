@@ -193,7 +193,7 @@ export default function RegistrationsTable({
                   hasPass: targetVerified,
                   passStatus: targetVerified ? "active" : "none",
                   paymentStatus: targetVerified ? "completed" : "pending",
-                  amount: targetVerified ? 1000 : r.amount,
+                  amount: targetVerified ? "1000" : r.amount,
                 }
               : r
           )

@@ -3,16 +3,13 @@ import {
   generateUpiQrDataUrl,
 } from "upi-qr-code-generator";
 
-export async function generateUpiQR(
-  transactionNote: string,
-  transactionRef: string,
-) {
+export async function generateUpiQR(transactionRef: string) {
   const payment = {
     payeeVpa: "sbibhim.022211900793125-ym668107@sbipay",
     payeeName: "INCHARGE ALUMNI SBS STATE",
     amount: "1000.00",
     transactionRef,
-    transactionNote,
+    transactionNote: "Alumni Meet - Sanjh 2026",
   };
   const uri = createUpiPaymentUri(payment);
 

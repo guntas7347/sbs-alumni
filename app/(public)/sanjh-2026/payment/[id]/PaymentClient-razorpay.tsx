@@ -372,15 +372,19 @@ export default function PaymentClient({
                   {registration.attendanceType}
                 </span>
               </div>
-              {registration.culturalInterest !== "none" && (
-                <div className="flex justify-between">
-                  <span className="text-zinc-500">Cultural Act:</span>
-                  <span className="capitalize font-semibold text-orange-700">
-                    {registration.culturalInterest} (Cert. Eligible)
-                  </span>
-                </div>
-              )}
-              {Boolean(registration.guestCount && registration.guestCount > 0) && (
+              {(registration as any).culturalInterest &&
+                (registration as any).culturalInterest !== "none" && (
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Cultural Act:</span>
+                    <span className="capitalize font-semibold text-orange-700">
+                      {String((registration as any).culturalInterest)} (Cert.
+                      Eligible)
+                    </span>
+                  </div>
+                )}
+              {Boolean(
+                registration.guestCount && Number(registration.guestCount) > 0,
+              ) && (
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Accompanying Guests:</span>
                   <span className="font-medium text-zinc-800">
@@ -411,7 +415,7 @@ export default function PaymentClient({
               </div>
               <p>• Reserved auditorium seat for Sanjh 2026 Cultural Function</p>
               <p>• High Tea, Souvenir Alumni Kit & Grand Alumni Dinner</p>
-              <p>• Official Participation Certificate for performers</p>
+              {/* <p>• Official Participation Certificate for performers</p> */}
               <p>• Lifetime University Alumni Network access</p>
             </div>
           </div>

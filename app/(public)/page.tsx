@@ -32,7 +32,9 @@ export default function Home() {
             <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-100/90 border border-orange-300/80 text-orange-900 text-xs font-semibold shadow-2xs">
                 <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-                <span>Shaheed Bhagat Singh State University • alumni.sbssu.ac.in</span>
+                <span>
+                  Shaheed Bhagat Singh State University • alumni.sbssu.ac.in
+                </span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-zinc-900 tracking-tight leading-[1.15]">
@@ -44,7 +46,9 @@ export default function Home() {
               </h1>
 
               <p className="text-base sm:text-lg text-zinc-600 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                A grand celebration of nostalgia, lifelong bonds, and Punjab’s vibrant spirit. Reconnect with beloved professors, batchmates, and junior students at our historic 98-acre campus in Ferozepur.
+                A grand celebration of nostalgia, lifelong bonds, and Punjab’s
+                vibrant spirit. Reconnect with beloved professors, batchmates,
+                and junior students at our historic 98-acre campus in Ferozepur.
               </p>
 
               {/* Event highlight pills */}
@@ -59,7 +63,7 @@ export default function Home() {
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200 text-xs font-medium text-zinc-800 shadow-2xs">
                   <Award className="w-3.5 h-3.5 text-amber-500" />
-                  <span>Participation Certificates for All</span>
+                  {/* <span>Participation Certificates for All</span> */}
                 </div>
               </div>
 
@@ -92,7 +96,9 @@ export default function Home() {
 
               {/* Historical Badges */}
               <div className="pt-4 border-t border-orange-100 flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs text-zinc-500">
-                <span className="font-semibold text-zinc-700">Evolution Milestones:</span>
+                <span className="font-semibold text-zinc-700">
+                  Evolution Milestones:
+                </span>
                 <span className="bg-orange-50 text-orange-800 border border-orange-200 px-2.5 py-1 rounded-md">
                   1995: SBSCET Established
                 </span>
@@ -128,7 +134,9 @@ export default function Home() {
                   </div>
 
                   <p className="text-xs text-zinc-600 leading-relaxed">
-                    SECA (Society for Extracurricular Activities) proudly organizes its Annual Cultural Function as the pinnacle feature of the Alumni Meet 2026!
+                    SECA (Society for Extracurricular Activities) proudly
+                    organizes its Annual Cultural Function as the pinnacle
+                    feature of the Alumni Meet 2026!
                   </p>
 
                   <div className="bg-gradient-to-br from-emerald-50/70 to-emerald-50/20 border border-emerald-200 rounded-xl p-3.5 space-y-2 text-xs">
@@ -139,9 +147,10 @@ export default function Home() {
                     <div className="text-emerald-800">
                       📍 Main University Auditorium & Lawns, SBSSU Ferozepur
                     </div>
-                    <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 p-2 rounded-lg">
-                      📜 Note: Participation Certificates will be awarded to all registered participants!
-                    </div>
+                    {/* <div className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/60 p-2 rounded-lg">
+                      📜 Note: Participation Certificates will be awarded to all
+                      registered participants!
+                    </div> */}
                   </div>
 
                   <div className="space-y-2 text-xs text-zinc-600">
@@ -219,21 +228,33 @@ export default function Home() {
                 </div>
 
                 <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight">
-                  &ldquo;Our Alumni Are The Living Ambassadors Of Our University&apos;s Great Heritage&rdquo;
+                  &ldquo;Our Alumni Are The Living Ambassadors Of Our
+                  University&apos;s Great Heritage&rdquo;
                 </h2>
 
                 <div className="space-y-3 text-sm leading-relaxed text-zinc-600">
+                  <p>Dear Alumni, Faculty Members, and Students,</p>
                   <p>
-                    Dear Alumni, Faculty Members, and Students,
+                    It is with great pride and affection that I welcome each one
+                    of you to our official Alumni Portal. From our humble
+                    beginnings in 1995 as Shaheed Bhagat Singh College of
+                    Engineering & Technology (SBSCET), our campus has
+                    continually evolved—first becoming a State Technical Campus
+                    (SBSSTC) in 2011, and now standing tall as a premier State
+                    University (SBSSU).
                   </p>
                   <p>
-                    It is with great pride and affection that I welcome each one of you to our official Alumni Portal. From our humble beginnings in 1995 as Shaheed Bhagat Singh College of Engineering & Technology (SBSCET), our campus has continually evolved—first becoming a State Technical Campus (SBSSTC) in 2011, and now standing tall as a premier State University (SBSSU).
+                    The indelible contributions made by our alumni across
+                    multinational corporations, scientific institutions, public
+                    governance, and entrepreneurial ventures worldwide inspire
+                    our current batches of students every single day.
                   </p>
                   <p>
-                    The indelible contributions made by our alumni across multinational corporations, scientific institutions, public governance, and entrepreneurial ventures worldwide inspire our current batches of students every single day.
-                  </p>
-                  <p>
-                    I warmly invite all our alumni back home to Ferozepur for <strong className="text-zinc-900">Sanjh 2026</strong>. Come revisit your favorite campus spots, share your invaluable experiences with our budding engineers, and celebrate the timeless bond of togetherness.
+                    I warmly invite all our alumni back home to Ferozepur for{" "}
+                    <strong className="text-zinc-900">Sanjh 2026</strong>. Come
+                    revisit your favorite campus spots, share your invaluable
+                    experiences with our budding engineers, and celebrate the
+                    timeless bond of togetherness.
                   </p>
                 </div>
 
@@ -264,7 +285,8 @@ export default function Home() {
               One University, Three Strong Pillars
             </h3>
             <p className="text-xs sm:text-sm text-zinc-500">
-              This alumni portal serves our cherished alumni, our vibrant student community, and our dedicated faculty.
+              This alumni portal serves our cherished alumni, our vibrant
+              student community, and our dedicated faculty.
             </p>
           </div>
 
@@ -284,7 +306,9 @@ export default function Home() {
                   </h4>
                 </div>
                 <p className="text-xs text-zinc-600 leading-relaxed">
-                  Reconnect with your batchmates from SBSCET, SBSSTC, and SBSSU. Attend Sanjh 2026, receive your official alumni badge, mentor students, and share your journey.
+                  Reconnect with your batchmates from SBSCET, SBSSTC, and SBSSU.
+                  Attend Sanjh 2026, receive your official alumni badge, mentor
+                  students, and share your journey.
                 </p>
                 <ul className="space-y-1.5 text-xs text-zinc-600">
                   <li className="flex items-center gap-1.5">
@@ -328,7 +352,8 @@ export default function Home() {
                   </h4>
                 </div>
                 <p className="text-xs text-zinc-600 leading-relaxed">
-                  Step forward and showcase your creativity! Perform at Sanjh 2026 in Dance, Drama, Music, or Anchoring and earn prestigious university Participation Certificates.
+                  Step forward and showcase your creativity! Perform at Sanjh
+                  2026 in Dance, Drama, Music, or Anchoring.
                 </p>
                 <ul className="space-y-1.5 text-xs text-zinc-600">
                   <li className="flex items-center gap-1.5">
@@ -372,7 +397,9 @@ export default function Home() {
                   </h4>
                 </div>
                 <p className="text-xs text-zinc-600 leading-relaxed">
-                  Celebrating the professors, mentors, and lab instructors who shaped thousands of engineering careers since 1995. Department-level meetups and research synergy.
+                  Celebrating the professors, mentors, and lab instructors who
+                  shaped thousands of engineering careers since 1995.
+                  Department-level meetups and research synergy.
                 </p>
                 <ul className="space-y-1.5 text-xs text-zinc-600">
                   <li className="flex items-center gap-1.5">
@@ -418,11 +445,14 @@ export default function Home() {
               </h2>
 
               <p className="text-sm sm:text-base text-orange-50 leading-relaxed">
-                Organized by SECA (Society for Extracurricular Activities). Every year, SECA provides this special platform for you to showcase your talent, creativity, and enthusiasm.
+                Organized by SECA (Society for Extracurricular Activities).
+                Every year, SECA provides this special platform for you to
+                showcase your talent, creativity, and enthusiasm.
                 <br />
-                <span className="font-semibold underline decoration-white/50">
-                  Participation Certificates will be awarded to all participants!
-                </span>
+                {/* <span className="font-semibold underline decoration-white/50">
+                  Participation Certificates will be awarded to all
+                  participants!
+                </span> */}
               </p>
 
               <div className="flex flex-wrap items-center gap-4 pt-2">

@@ -49,12 +49,14 @@ const BarcodeScanner = dynamic(
     import("react-barcode-scanner").then((mod) => ({
       default: mod.BarcodeScanner,
     })),
-  { ssr: false }
+  { ssr: false },
 );
 
 export default function VerifyClient() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
-  const [facultyAuthorized, setFacultyAuthorized] = useState<boolean | null>(null);
+  const [facultyAuthorized, setFacultyAuthorized] = useState<boolean | null>(
+    null,
+  );
   const [checkingFaculty, setCheckingFaculty] = useState(false);
   const [facultyRole, setFacultyRole] = useState<string | null>(null);
   const [facultyRemark, setFacultyRemark] = useState<string | null>(null);
@@ -63,7 +65,9 @@ export default function VerifyClient() {
   const initialCode = searchParams.get("code") || searchParams.get("id") || "";
 
   // Mode: "scan" or "type"
-  const [mode, setMode] = useState<"scan" | "type">(initialCode ? "type" : "scan");
+  const [mode, setMode] = useState<"scan" | "type">(
+    initialCode ? "type" : "scan",
+  );
 
   // Camera state
   const [scannerPaused, setScannerPaused] = useState(false);
@@ -116,7 +120,7 @@ export default function VerifyClient() {
       } else {
         setCandidate(null);
         setErrorMessage(
-          res.error || `No candidate found matching code "${codeToSearch}".`
+          res.error || `No candidate found matching code "${codeToSearch}".`,
         );
       }
     } catch (err: any) {
@@ -175,7 +179,7 @@ export default function VerifyClient() {
                 verifiedBy: user.email!,
                 verifiedAt: now,
               }
-            : prev
+            : prev,
         );
       } else {
         alert(res.error || "Failed to mark check-in.");
@@ -223,7 +227,8 @@ export default function VerifyClient() {
               Faculty Sign In Required
             </h1>
             <p className="text-xs text-zinc-500">
-              Only authorized faculty and administrators added in Firestore can scan and verify gate passes.
+              Only authorized faculty and administrators added in Firestore can
+              scan and verify gate passes.
             </p>
           </div>
 
@@ -272,12 +277,15 @@ export default function VerifyClient() {
               Unauthorized Faculty Account
             </h1>
             <p className="text-xs text-zinc-600">
-              The Google account <strong className="text-zinc-900 font-mono">{user.email}</strong> has not been added as faculty by an administrator.
+              The Google account{" "}
+              <strong className="text-zinc-900 font-mono">{user.email}</strong>{" "}
+              has not been added as faculty by an administrator.
             </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-500 text-left">
-            To verify candidate passes and record check-ins, an administrator must first authorize your Gmail ID in the Administrator Console.
+            To verify candidate passes and record check-ins, an administrator
+            must first authorize your Gmail ID in the Administrator Console.
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -339,7 +347,11 @@ export default function VerifyClient() {
           </div>
         </div>
         <p className="text-xs text-orange-100 max-w-xl">
-          Authorized Faculty Officer: <strong className="font-mono text-white">{user.email}</strong> {facultyRemark ? `(${facultyRemark})` : ""}. Scan pass barcode or enter registration code to verify candidates. All check-ins record your verified Gmail ID.
+          Authorized Faculty Officer:{" "}
+          <strong className="font-mono text-white">{user.email}</strong>{" "}
+          {facultyRemark ? `(${facultyRemark})` : ""}. Scan pass barcode or
+          enter registration code to verify candidates. All check-ins record
+          your verified Gmail ID.
         </p>
       </div>
 
@@ -383,7 +395,8 @@ export default function VerifyClient() {
                 Live Camera Barcode Scanner
               </h2>
               <p className="text-xs text-zinc-500">
-                Point your mobile or webcam at the candidate pass barcode or QR code.
+                Point your mobile or webcam at the candidate pass barcode or QR
+                code.
               </p>
             </div>
 
@@ -414,7 +427,7 @@ export default function VerifyClient() {
                   onCameraError={(err) => {
                     console.warn("Camera error:", err);
                     setCameraError(
-                      "Camera is not available or access was denied. Please switch to manual code entry."
+                      "Camera is not available or access was denied. Please switch to manual code entry.",
                     );
                   }}
                   className="w-full h-full object-cover"
@@ -464,7 +477,8 @@ export default function VerifyClient() {
               Manual Code Lookup
             </h2>
             <p className="text-xs text-zinc-500">
-              Enter Alumni Pass Number (e.g. SBSSU-ALM-2026-1234) or Roll Number.
+              Enter Alumni Pass Number (e.g. SBSSU-ALM-2026-1234) or Roll
+              Number.
             </p>
           </div>
 
@@ -536,7 +550,11 @@ export default function VerifyClient() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              {Boolean(candidate.hasPass || candidate.passStatus === "active" || candidate.paymentStatus === "completed") ? (
+              {Boolean(
+                candidate.hasPass ||
+                candidate.passStatus === "active" ||
+                candidate.paymentStatus === "completed",
+              ) ? (
                 <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 flex items-center gap-1.5">
                   <Ticket className="w-3.5 h-3.5 text-emerald-700" />
                   Pass Active (₹1,000 Paid)
@@ -559,7 +577,11 @@ export default function VerifyClient() {
           </div>
 
           {/* Pass Status Warning if No Pass */}
-          {!Boolean(candidate.hasPass || candidate.passStatus === "active" || candidate.paymentStatus === "completed") && (
+          {!Boolean(
+            candidate.hasPass ||
+            candidate.passStatus === "active" ||
+            candidate.paymentStatus === "completed",
+          ) && (
             <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
@@ -567,14 +589,18 @@ export default function VerifyClient() {
                   ENTRY PASS REQUIRED: No Active Meet Pass Found
                 </span>
                 <p className="text-zinc-700">
-                  This alumnus has registered their details in the university directory (Free), but has <strong>NOT</strong> purchased the Sanjh 2026 Event Pass (₹1,000). Gate admission and dinner coupons require an active pass.
+                  This alumnus has registered their details in the university
+                  directory (Free), but has <strong>NOT</strong> purchased the
+                  Sanjh 2026 Event Pass (₹1,000). Gate admission and dinner
+                  coupons require an active pass.
                 </p>
                 <Link
-                  href={`/payment/${candidate.id}`}
+                  href={`/sanjh-2026/payment/${candidate.id}`}
                   target="_blank"
                   className="inline-flex items-center gap-1.5 font-bold text-orange-700 hover:underline pt-1"
                 >
-                  Complete ₹1,000 Payment via Razorpay <ExternalLink className="w-3 h-3" />
+                  Complete ₹1,000 Payment via Razorpay{" "}
+                  <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>
             </div>
@@ -589,14 +615,25 @@ export default function VerifyClient() {
                   ★ APPROVED STAGE PERFORMER
                 </span>
                 <h3 className="text-base font-black">
-                  Act: {candidate.performanceApplication?.title || candidate.culturalDetails || "Cultural Performance"}
+                  Act:{" "}
+                  {candidate.performanceApplication?.title ||
+                    (candidate as any).culturalDetails ||
+                    "Cultural Performance"}
                 </h3>
                 <p className="text-xs text-emerald-100">
-                  Category: <strong>{candidate.performanceApplication?.category || candidate.culturalInterest || "Stage Act"}</strong> • Report to Stage Coordinator at 4:30 PM.
+                  Category:{" "}
+                  <strong>
+                    {candidate.performanceApplication?.category ||
+                      String(
+                        (candidate as any).culturalInterest || "Stage Act",
+                      )}
+                  </strong>{" "}
+                  • Report to Stage Coordinator at 4:30 PM.
                 </p>
                 {candidate.performanceApplication?.adminRemarks && (
                   <p className="text-xs bg-black/15 p-2 rounded-lg italic mt-1">
-                    Coordinator Notes: &ldquo;{candidate.performanceApplication.adminRemarks}&rdquo;
+                    Coordinator Notes: &ldquo;
+                    {candidate.performanceApplication.adminRemarks}&rdquo;
                   </p>
                 )}
               </div>
@@ -633,14 +670,19 @@ export default function VerifyClient() {
                 {candidate.rollNumber && (
                   <div className="flex justify-between">
                     <span className="text-zinc-400">Roll Number:</span>
-                    <span className="font-mono text-zinc-800">{candidate.rollNumber}</span>
+                    <span className="font-mono text-zinc-800">
+                      {candidate.rollNumber}
+                    </span>
                   </div>
                 )}
                 {candidate.currentDesignation && (
                   <div className="flex justify-between">
                     <span className="text-zinc-400">Role / Company:</span>
                     <span className="text-zinc-800 text-right">
-                      {candidate.currentDesignation} {candidate.organization ? `@ ${candidate.organization}` : ""}
+                      {candidate.currentDesignation}{" "}
+                      {candidate.organization
+                        ? `@ ${candidate.organization}`
+                        : ""}
                     </span>
                   </div>
                 )}
@@ -660,19 +702,22 @@ export default function VerifyClient() {
                     {candidate.performerStatus === "approved"
                       ? "Approved Stage Performer"
                       : candidate.performerStatus === "pending"
-                      ? "Performer (Pending Review)"
-                      : "Honored Attendee"}
+                        ? "Performer (Pending Review)"
+                        : "Honored Attendee"}
                   </span>
                 </div>
                 {Boolean(
                   (candidate.guests && candidate.guests.length > 0) ||
-                    (candidate.guestCount && candidate.guestCount > 0)
+                  (candidate.guestCount && Number(candidate.guestCount) > 0),
                 ) && (
                   <div className="space-y-1.5 pt-1 border-t border-orange-200/60">
                     <div className="flex justify-between items-baseline">
-                      <span className="text-zinc-500">Accompanying Guests:</span>
+                      <span className="text-zinc-500">
+                        Accompanying Guests:
+                      </span>
                       <span className="font-bold text-zinc-900">
-                        +{candidate.guests?.length ?? candidate.guestCount ?? 0} Family Member(s)
+                        +{candidate.guests?.length ?? candidate.guestCount ?? 0}{" "}
+                        Family Member(s)
                       </span>
                     </div>
                     {candidate.guests && candidate.guests.length > 0 && (
@@ -719,9 +764,18 @@ export default function VerifyClient() {
                     <span>Checked-In at Sanjh 2026 Venue</span>
                   </div>
                   <div className="text-[11px] text-zinc-500 pl-1">
-                    Verified by: <strong className="text-zinc-800 font-mono">{candidate.verifiedBy || user?.email || "Faculty Officer"}</strong>
+                    Verified by:{" "}
+                    <strong className="text-zinc-800 font-mono">
+                      {candidate.verifiedBy || user?.email || "Faculty Officer"}
+                    </strong>
                     {(candidate.verifiedAt || candidate.checkedInAt) && (
-                      <span> • {new Date(candidate.verifiedAt || candidate.checkedInAt!).toLocaleString()}</span>
+                      <span>
+                        {" "}
+                        •{" "}
+                        {new Date(
+                          candidate.verifiedAt || candidate.checkedInAt!,
+                        ).toLocaleString()}
+                      </span>
                     )}
                   </div>
                 </div>

@@ -9,7 +9,11 @@ import {
   createAlumniRegistration,
   getAlumniRegistrationByEmail,
 } from "@/lib/actions/alumniActions";
-import type { AlumniRegistration, AllowedGuestRelation, GuestDetail } from "@/lib/types";
+import type {
+  AlumniRegistration,
+  AllowedGuestRelation,
+  GuestDetail,
+} from "@/lib/types";
 import {
   GraduationCap,
   Sparkles,
@@ -34,17 +38,66 @@ import {
   Users,
 } from "lucide-react";
 
+const degrees = [
+  "B.Tech (CSE)",
+  "B.Tech (IT)",
+  "B.Tech (ECE)",
+  "B.Tech (EE)",
+  "B.Tech (Mech)",
+  "BBA",
+  "BCA",
+  "B.Sc",
+  "B.Pharm",
+  "B.Arch",
+  "B.A",
+  "B.Com",
+  "MBA",
+  "MCA",
+  "M.Tech",
+  "M.Sc",
+  "M.Pharm",
+  "M.Arch",
+  "M.A",
+  "M.Com",
+  "PhD",
+];
+const branches = [
+  "Computer Science and Engineering",
+  "Information Technology",
+  "Electronics and Communication Engineering",
+  "Electrical Engineering",
+  "Mechanical Engineering",
+  "Business Administration",
+  "Computer Applications",
+  "Science",
+  "Pharmacy",
+  "Architecture",
+  "Arts",
+  "Commerce",
+  "Business Administration",
+  "Computer Applications",
+  "Science",
+  "Pharmacy",
+  "Architecture",
+  "Arts",
+  "Commerce",
+];
+
 export default function RegistrationForm() {
   const router = useRouter();
   const { user, loading: authLoading, signIn } = useAuth();
 
-  const [existingReg, setExistingReg] = useState<AlumniRegistration | null>(null);
+  const [existingReg, setExistingReg] = useState<AlumniRegistration | null>(
+    null,
+  );
   const [checkingExisting, setCheckingExisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   // Success state for "Register Only" flow
-  const [newlyRegisteredId, setNewlyRegisteredId] = useState<string | null>(null);
+  const [newlyRegisteredId, setNewlyRegisteredId] = useState<string | null>(
+    null,
+  );
   const [newlyRegNumber, setNewlyRegNumber] = useState<string | null>(null);
   const [newlyRegAttending, setNewlyRegAttending] = useState<boolean>(true);
 
@@ -58,6 +111,24 @@ export default function RegistrationForm() {
     { name: "", relation: "Child" },
     { name: "", relation: "Mom" },
   ]);
+
+  // Stage Performance Request (Asked directly when attending)
+  const [wantToPerform, setWantToPerform] = useState<boolean>(false);
+  const [performanceType, setPerformanceType] = useState<string>("");
+
+  // Vice Chancellor Interaction Request (Asked directly when attending)
+  const [wantToInteractWithVC, setWantToInteractWithVC] =
+    useState<boolean>(false);
+  const [vcInteractionPortfolio, setVcInteractionPortfolio] =
+    useState<string>("");
+  const [vcInteractionReason, setVcInteractionReason] = useState<string>("");
+
+  // Special Request Field (Default "")
+  const [specialRequest, setSpecialRequest] = useState<string>("");
+
+  // Custom "Other" values for Degree and Branch
+  const [customDegree, setCustomDegree] = useState<string>("");
+  const [customBranch, setCustomBranch] = useState<string>("");
 
   // Alumni Registration Form state
   const formState = useForm({
@@ -94,7 +165,9 @@ export default function RegistrationForm() {
             setExistingReg(res.data);
           }
         })
-        .catch((err) => console.error("Error checking existing registration:", err))
+        .catch((err) =>
+          console.error("Error checking existing registration:", err),
+        )
         .finally(() => setCheckingExisting(false));
     }
   }, [user]);
@@ -129,7 +202,7 @@ export default function RegistrationForm() {
         }
         if (!g.relation || !allowedRelations.has(g.relation)) {
           setServerError(
-            `Invalid relation for Guest ${i + 1}. Only Mom, Dad, Spouse, or Child are permitted.`
+            `Invalid relation for Guest ${i + 1}. Only Mom, Dad, Spouse, or Child are permitted.`,
           );
           return;
         }
@@ -138,6 +211,27 @@ export default function RegistrationForm() {
 
     setSubmitting(true);
 
+    // Format "Other" Degree and Branch selections
+    let finalDegree = f.degree;
+    if (f.degree === "Other") {
+      if (!customDegree.trim()) {
+        setServerError("Please specify your Degree Program.");
+        setSubmitting(false);
+        return;
+      }
+      finalDegree = `Other: ${customDegree.trim()}`;
+    }
+
+    let finalBranch = f.branch;
+    if (f.branch === "Other") {
+      if (!customBranch.trim()) {
+        setServerError("Please specify your Branch / Department.");
+        setSubmitting(false);
+        return;
+      }
+      finalBranch = `Other: ${customBranch.trim()}`;
+    }
+
     try {
       const res = await createAlumniRegistration({
         fullName: f.fullName,
@@ -145,8 +239,8 @@ export default function RegistrationForm() {
         phone: f.phone,
         whatsapp: f.whatsapp || f.phone,
         era: f.era as any,
-        degree: f.degree,
-        branch: f.branch,
+        degree: finalDegree,
+        branch: finalBranch,
         passingYear: f.passingYear,
         rollNumber: f.rollNumber,
         currentDesignation: f.currentDesignation,
@@ -158,16 +252,33 @@ export default function RegistrationForm() {
         // If attending: in-person; if info only: supporting
         attendanceType: attendMeet ? "in-person" : "supporting",
         attendingMeet: attendMeet,
-        guestCount: attendMeet ? activeGuests.length : 0,
+        guestCount: String(attendMeet ? activeGuests.length : 0),
+        guest1Name: attendMeet ? activeGuests[0]?.name || "" : "",
+        guest1Relation: attendMeet ? activeGuests[0]?.relation || "" : "",
+        guest2Name: attendMeet ? activeGuests[1]?.name || "" : "",
+        guest2Relation: attendMeet ? activeGuests[1]?.relation || "" : "",
+        guest3Name: attendMeet ? activeGuests[2]?.name || "" : "",
+        guest3Relation: attendMeet ? activeGuests[2]?.relation || "" : "",
         guests: attendMeet ? activeGuests : [],
+        wantToPerform: attendMeet ? wantToPerform : false,
+        performanceType:
+          attendMeet && wantToPerform ? performanceType.trim() : "",
+        wantToInteractWithVC: attendMeet ? wantToInteractWithVC : false,
+        vcInteractionPortfolio:
+          attendMeet && wantToInteractWithVC
+            ? vcInteractionPortfolio.trim()
+            : "",
+        vcInteractionReason:
+          attendMeet && wantToInteractWithVC ? vcInteractionReason.trim() : "",
+        specialRequest: specialRequest.trim(),
         memoriesMessage: f.memoriesMessage,
-        amount: 0,
+        amount: attendMeet ? "1000" : "0",
       });
 
       if (res.success && res.id) {
         if (attendMeet) {
           // If user chose to Attend (₹1,000), redirect immediately to UPI QR payment
-          router.push(`/payment/${res.id}`);
+          router.push(`/sanjh-2026/payment/${res.id}`);
         } else {
           // If user chose "Register Only (No Attend)", show confirmation screen
           setNewlyRegisteredId(res.id);
@@ -188,7 +299,9 @@ export default function RegistrationForm() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3">
         <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
-        <p className="text-sm text-zinc-500 font-medium">Verifying authentication status...</p>
+        <p className="text-sm text-zinc-500 font-medium">
+          Verifying authentication status...
+        </p>
       </div>
     );
   }
@@ -210,7 +323,8 @@ export default function RegistrationForm() {
               Sign In to Register with University
             </h1>
             <p className="text-sm text-zinc-600 max-w-md mx-auto leading-relaxed">
-              Please sign in with your Google account so the university can verify your identity and link your alumni registration record.
+              Please sign in with your Google account so the university can
+              verify your identity and link your alumni registration record.
             </p>
           </div>
 
@@ -220,7 +334,10 @@ export default function RegistrationForm() {
               University Directory Registration vs. Sanjh 2026 Event Pass
             </span>
             <p className="text-zinc-600">
-              Providing your information to the university alumni directory is <strong>100% Free</strong>. If you wish to physically visit the campus and attend the 1st Alumni Meet & Sanjh 2026 on Nov 14, 2026, an Event Pass is <strong>₹1,000</strong>.
+              Providing your information to the university alumni directory is{" "}
+              <strong>100% Free</strong>. If you wish to physically visit the
+              campus and attend the 1st Alumni Meet & Sanjh 2026 on Nov 14,
+              2026, an Event Pass is <strong>₹1,000</strong>.
             </p>
           </div>
 
@@ -270,14 +387,17 @@ export default function RegistrationForm() {
               Welcome to the SBSSU Alumni Directory!
             </h1>
             <p className="text-sm text-zinc-600 max-w-lg mx-auto">
-              Your details have been successfully recorded in the Shaheed Bhagat Singh State University Alumni Directory.
+              Your details have been successfully recorded in the Shaheed Bhagat
+              Singh State University Alumni Directory.
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-left space-y-2">
             <div className="flex justify-between">
               <span className="text-zinc-500">Alumni Registration Number:</span>
-              <strong className="font-mono text-zinc-900 text-sm">{newlyRegNumber}</strong>
+              <strong className="font-mono text-zinc-900 text-sm">
+                {newlyRegNumber}
+              </strong>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Registered Email:</span>
@@ -298,16 +418,20 @@ export default function RegistrationForm() {
               <span>Campus Entry Notice</span>
             </div>
             <p className="text-amber-900 leading-relaxed">
-              You chose <strong>Register Only (No Attend)</strong>. This means you do <strong>not</strong> have a venue entry pass for the 1st Alumni Meet & Sanjh 2026 on Nov 14, 2026.
+              You chose <strong>Register Only (No Attend)</strong>. This means
+              you do <strong>not</strong> have a venue entry pass for the 1st
+              Alumni Meet & Sanjh 2026 on Nov 14, 2026.
             </p>
             <p className="text-zinc-600">
-              If you change your mind and wish to visit the campus, receive the souvenir kit, and attend the grand gala dinner, you can acquire your <strong>Alumni Meet Event Pass (₹1,000)</strong> at any time.
+              If you change your mind and wish to visit the campus, receive the
+              souvenir kit, and attend the grand gala dinner, you can acquire
+              your <strong>Alumni Meet Event Pass (₹1,000)</strong> at any time.
             </p>
           </div>
 
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href={`/payment/${newlyRegisteredId}`}
+              href={`/sanjh-2026/payment/${newlyRegisteredId}`}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shadow-xs"
             >
               <Ticket className="w-4 h-4" />
@@ -328,7 +452,9 @@ export default function RegistrationForm() {
 
   // 3. Existing Registration Found
   if (existingReg) {
-    const hasPass = Boolean(existingReg.hasPass || existingReg.passStatus === "active");
+    const hasPass = Boolean(
+      existingReg.hasPass || existingReg.passStatus === "active",
+    );
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-14 space-y-6">
@@ -372,7 +498,9 @@ export default function RegistrationForm() {
                     : "bg-amber-100 text-amber-900"
                 }`}
               >
-                {hasPass ? "✓ Active Pass (₹1,000 Paid)" : "No Pass Active (Registered Only)"}
+                {hasPass
+                  ? "✓ Active Pass (₹1,000 Paid)"
+                  : "No Pass Active (Registered Only)"}
               </span>
             </div>
           </div>
@@ -384,7 +512,8 @@ export default function RegistrationForm() {
                   You have an Active Sanjh 2026 Event Pass!
                 </strong>
                 <span className="text-emerald-800">
-                  You can view your printable gate pass with barcode and apply for stage performances.
+                  You can view your printable gate pass with barcode and apply
+                  for stage performances.
                 </span>
               </div>
               <Link
@@ -402,11 +531,12 @@ export default function RegistrationForm() {
                   Planning to Attend the Alumni Meet in Person?
                 </strong>
                 <span className="text-zinc-600">
-                  Your directory record is on file. To physically visit campus on Nov 14, 2026, get your official Event Pass for ₹1,000.
+                  Your directory record is on file. To physically visit campus
+                  on Nov 14, 2026, get your official Event Pass for ₹1,000.
                 </span>
               </div>
               <Link
-                href={`/payment/${existingReg.id}`}
+                href={`/sanjh-2026/payment/${existingReg.id}`}
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shrink-0 shadow-xs"
               >
                 <Sparkles className="w-4 h-4" />
@@ -477,7 +607,11 @@ export default function RegistrationForm() {
                   1. University Directory Registration (Free ₹0):
                 </strong>
                 <p className="text-zinc-600 text-[11px] leading-relaxed">
-                  Provides your contact and career details so your alma mater knows about you. <strong>Does not grant entry to the campus or Alumni Meet on Nov 14.</strong>
+                  Provides your contact and career details so your alma mater
+                  knows about you.{" "}
+                  <strong>
+                    Does not grant entry to the campus or Alumni Meet on Nov 14.
+                  </strong>
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-white/80 border border-orange-100 space-y-1">
@@ -485,7 +619,9 @@ export default function RegistrationForm() {
                   2. Sanjh 2026 Event Pass (₹1,000):
                 </strong>
                 <p className="text-zinc-600 text-[11px] leading-relaxed">
-                  Required to attend the event on campus on Nov 14, 2026. Includes entry barcode, high tea, souvenir kit, and gala dinner.
+                  Required to attend the event on campus on Nov 14, 2026.
+                  Includes entry barcode, high tea, souvenir kit, and gala
+                  dinner.
                 </p>
               </div>
             </div>
@@ -495,7 +631,9 @@ export default function RegistrationForm() {
         {/* Section 1: Personal & Contact */}
         <div className="space-y-4">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">1</span>
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">
+              1
+            </span>
             Personal & Contact Details
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -561,7 +699,9 @@ export default function RegistrationForm() {
         {/* Section 2: Academic Background */}
         <div className="space-y-4">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">2</span>
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">
+              2
+            </span>
             Academic Era & Graduation Details
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -591,21 +731,34 @@ export default function RegistrationForm() {
                 onChange={formState.handleChange}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
               >
-                <option value="B.Tech">B.Tech</option>
-                <option value="M.Tech">M.Tech</option>
-                <option value="BCA">BCA</option>
-                <option value="MCA">MCA</option>
-                <option value="MBA">MBA</option>
-                <option value="BBA">BBA</option>
-                <option value="B.Sc">B.Sc</option>
-                <option value="Diploma">Diploma</option>
-                <option value="PhD">PhD Scholar</option>
+                {degrees.map((degree) => (
+                  <option key={degree} value={degree}>
+                    {degree}
+                  </option>
+                ))}
+                <option value="Other">Other (Please specify)</option>
               </select>
+              {formState.form.degree === "Other" && (
+                <div className="mt-2 space-y-1">
+                  <label className="block text-[11px] font-semibold text-orange-800">
+                    Specify Degree Program{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customDegree}
+                    onChange={(e) => setCustomDegree(e.target.value)}
+                    placeholder="Enter your degree name (e.g. B.Com, B.Arch, M.Sc)..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-orange-300 bg-orange-50/40 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-zinc-700 mb-1">
-                Passing Year / Batch
+                Passing out year
               </label>
               <select
                 name="passingYear"
@@ -633,16 +786,29 @@ export default function RegistrationForm() {
                 onChange={formState.handleChange}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
               >
-                <option value="Computer Science & Engineering (CSE)">Computer Science & Engineering (CSE)</option>
-                <option value="Electronics & Communication (ECE)">Electronics & Communication (ECE)</option>
-                <option value="Mechanical Engineering (ME)">Mechanical Engineering (ME)</option>
-                <option value="Civil Engineering (CE)">Civil Engineering (CE)</option>
-                <option value="Electrical Engineering (EE)">Electrical Engineering (EE)</option>
-                <option value="Chemical Engineering">Chemical Engineering</option>
-                <option value="Information Technology (IT)">Information Technology (IT)</option>
-                <option value="Management Studies">Management Studies</option>
-                <option value="Applied Sciences">Applied Sciences</option>
+                {branches.map((branch) => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))}
+                <option value="Other">Other (Please specify)</option>
               </select>
+              {formState.form.branch === "Other" && (
+                <div className="mt-2 space-y-1">
+                  <label className="block text-[11px] font-semibold text-orange-800">
+                    Specify Branch / Department{" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customBranch}
+                    onChange={(e) => setCustomBranch(e.target.value)}
+                    placeholder="Enter your branch / specialization..."
+                    className="w-full px-3.5 py-2 rounded-xl border border-orange-300 bg-orange-50/40 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -664,7 +830,9 @@ export default function RegistrationForm() {
         {/* Section 3: Professional & Location */}
         <div className="space-y-4">
           <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-700 border-b border-orange-100 pb-2 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">3</span>
+            <span className="w-6 h-6 rounded-full bg-orange-100 text-orange-700 text-xs flex items-center justify-center font-mono">
+              3
+            </span>
             Professional Profile & Location
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -715,7 +883,7 @@ export default function RegistrationForm() {
                 LinkedIn Profile URL
               </label>
               <input
-                type="url"
+                type="text"
                 name="linkedin"
                 value={formState.form.linkedin}
                 onChange={formState.handleChange}
@@ -736,7 +904,8 @@ export default function RegistrationForm() {
               <span>Participation & Attendance Choice</span>
             </h2>
             <p className="text-xs text-zinc-500 mt-1">
-              Select whether you are attending Sanjh 2026 on campus or only submitting your information to the university directory.
+              Select whether you are attending Sanjh 2026 on campus or only
+              submitting your information to the university directory.
             </p>
           </div>
 
@@ -751,7 +920,8 @@ export default function RegistrationForm() {
               />
               <div className="space-y-0.5">
                 <span className="text-sm font-bold text-zinc-900 block">
-                  I want to Register & Attend the Alumni Meet on Campus (Event Pass: ₹1,000)
+                  I want to Register & Attend the Alumni Meet on Campus (Event
+                  Pass: ₹1,000)
                 </span>
                 <p className="text-xs text-zinc-500">
                   {attendMeet
@@ -785,7 +955,9 @@ export default function RegistrationForm() {
                         : "bg-zinc-100 text-zinc-600"
                     }`}
                   >
-                    {attendMeet ? "✓ Selected (Recommended)" : "Click to Select"}
+                    {attendMeet
+                      ? "✓ Selected (Recommended)"
+                      : "Click to Select"}
                   </span>
                 </div>
 
@@ -823,9 +995,14 @@ export default function RegistrationForm() {
               </div>
 
               <div className="pt-3 border-t border-orange-200 flex items-center justify-between">
-                <span className="text-xs text-zinc-500 font-medium">Pass Fee:</span>
+                <span className="text-xs text-zinc-500 font-medium">
+                  Pass Fee:
+                </span>
                 <span className="text-lg font-black text-orange-600">
-                  ₹1,000 <span className="text-xs font-normal text-zinc-500">(UPI QR)</span>
+                  ₹1,000{" "}
+                  <span className="text-xs font-normal text-zinc-500">
+                    (UPI QR)
+                  </span>
                 </span>
               </div>
             </div>
@@ -889,9 +1066,14 @@ export default function RegistrationForm() {
               </div>
 
               <div className="pt-3 border-t border-zinc-200 flex items-center justify-between">
-                <span className="text-xs text-zinc-500 font-medium">Registration Fee:</span>
+                <span className="text-xs text-zinc-500 font-medium">
+                  Registration Fee:
+                </span>
                 <span className="text-lg font-black text-emerald-700">
-                  Free <span className="text-xs font-normal text-zinc-500">(₹0)</span>
+                  Free{" "}
+                  <span className="text-xs font-normal text-zinc-500">
+                    (₹0)
+                  </span>
                 </span>
               </div>
             </div>
@@ -902,10 +1084,19 @@ export default function RegistrationForm() {
             <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 space-y-1.5 animate-in fade-in duration-300">
               <div className="flex items-center gap-2 font-bold text-amber-900 text-xs">
                 <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>CONFIRMATION: DIRECTORY RECORD ONLY (NOT ATTENDING EVENT)</span>
+                <span>
+                  CONFIRMATION: DIRECTORY RECORD ONLY (NOT ATTENDING EVENT)
+                </span>
               </div>
               <p className="text-xs leading-relaxed text-amber-900 font-medium">
-                You have chosen to register your details for university records without attending the 1st Alumni Meet. <strong>You will NOT be issued a campus entry pass or dinner ticket for November 14, 2026.</strong> If you later wish to attend, you can purchase an Event Pass (₹1,000) from your profile card.
+                You have chosen to register your details for university records
+                without attending the 1st Alumni Meet.{" "}
+                <strong>
+                  You will NOT be issued a campus entry pass or dinner ticket
+                  for November 14, 2026.
+                </strong>{" "}
+                If you later wish to attend, you can purchase an Event Pass
+                (₹1,000) from your profile card.
               </p>
             </div>
           )}
@@ -922,7 +1113,8 @@ export default function RegistrationForm() {
                 <span>Attendance Logistics & Accompanying Guests</span>
               </h2>
               <p className="text-xs text-zinc-500 mt-1">
-                Configure accompanying family members for campus catering and seating.
+                Configure accompanying family members for campus catering and
+                seating.
               </p>
             </div>
 
@@ -933,7 +1125,13 @@ export default function RegistrationForm() {
                 <span>ACCOMPANYING GUESTS POLICY (MAXIMUM 3 GUESTS)</span>
               </div>
               <p className="text-xs text-zinc-700 leading-relaxed">
-                To maintain proper auditorium seating and catering arrangements, each alumnus is allowed a <strong>maximum of 3 accompanying guests</strong>. Permitted relations are strictly restricted to immediate family: <strong>Mom, Dad, Spouse, or Child</strong>. Friends or other relations are not permitted. Full name is required for each guest.
+                To maintain proper auditorium seating and catering arrangements,
+                each alumnus is allowed a{" "}
+                <strong>maximum of 3 accompanying guests</strong>. Permitted
+                relations are strictly restricted to immediate family:{" "}
+                <strong>Mom, Dad, Spouse, or Child</strong>. Friends or other
+                relations are not permitted. Full name is required for each
+                guest.
               </p>
             </div>
 
@@ -962,7 +1160,10 @@ export default function RegistrationForm() {
                 <div className="flex items-center justify-between border-b border-zinc-200/80 pb-2">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-800 flex items-center gap-1.5">
                     <Users className="w-3.5 h-3.5 text-orange-600" />
-                    <span>Accompanying Guest Details ({guestCount} Guest{guestCount > 1 ? "s" : ""})</span>
+                    <span>
+                      Accompanying Guest Details ({guestCount} Guest
+                      {guestCount > 1 ? "s" : ""})
+                    </span>
                   </h3>
                   <span className="text-[11px] text-orange-700 font-semibold bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
                     Mom, Dad, Spouse, Child only
@@ -979,13 +1180,16 @@ export default function RegistrationForm() {
                         <span className="text-xs font-extrabold text-orange-800 bg-orange-100 px-2 py-0.5 rounded-md">
                           Guest {idx + 1}
                         </span>
-                        <span className="text-[11px] text-zinc-400">Immediate Family Only</span>
+                        <span className="text-[11px] text-zinc-400">
+                          Immediate Family Only
+                        </span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                         <div className="sm:col-span-7">
                           <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
-                            Guest Full Name <span className="text-rose-500">*</span>
+                            Guest Full Name{" "}
+                            <span className="text-rose-500">*</span>
                           </label>
                           <input
                             type="text"
@@ -1003,10 +1207,10 @@ export default function RegistrationForm() {
                               guestList[idx]?.relation === "Mom"
                                 ? "Mother's Full Name"
                                 : guestList[idx]?.relation === "Dad"
-                                ? "Father's Full Name"
-                                : guestList[idx]?.relation === "Child"
-                                ? "Child's Full Name"
-                                : "Spouse Full Name"
+                                  ? "Father's Full Name"
+                                  : guestList[idx]?.relation === "Child"
+                                    ? "Child's Full Name"
+                                    : "Spouse Full Name"
                             }`}
                             className="w-full px-3 py-2 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
@@ -1014,7 +1218,8 @@ export default function RegistrationForm() {
 
                         <div className="sm:col-span-5">
                           <label className="block text-[11px] font-semibold text-zinc-700 mb-1">
-                            Relation to Alumnus <span className="text-rose-500">*</span>
+                            Relation to Alumnus{" "}
+                            <span className="text-rose-500">*</span>
                           </label>
                           <select
                             value={guestList[idx]?.relation || "Spouse"}
@@ -1022,14 +1227,19 @@ export default function RegistrationForm() {
                               const updated = [...guestList];
                               updated[idx] = {
                                 name: updated[idx]?.name || "",
-                                relation: e.target.value as AllowedGuestRelation,
+                                relation: e.target
+                                  .value as AllowedGuestRelation,
                               };
                               setGuestList(updated);
                             }}
                             className="w-full px-3 py-2 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white font-medium"
                           >
-                            <option value="Spouse">Spouse (Husband / Wife)</option>
-                            <option value="Child">Child (Son / Daughter)</option>
+                            <option value="Spouse">
+                              Spouse (Husband / Wife)
+                            </option>
+                            <option value="Child">
+                              Child (Son / Daughter)
+                            </option>
                             <option value="Mom">Mom (Mother)</option>
                             <option value="Dad">Dad (Father)</option>
                           </select>
@@ -1040,15 +1250,134 @@ export default function RegistrationForm() {
                 </div>
               </div>
             )}
+
+            {/* STAGE PERFORMANCE OPTION (Directly asked when attending) */}
+            <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/90 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={wantToPerform}
+                  onChange={(e) => setWantToPerform(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-orange-600 focus:ring-orange-500 border-zinc-300"
+                />
+                <div>
+                  <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
+                    <Music className="w-3.5 h-3.5 text-orange-600" />
+                    Want to perform on stage during Sanjh 2026 Cultural
+                    Function?
+                  </span>
+                  <span className="text-[11px] text-zinc-500 block mt-0.5">
+                    Showcase your talent!
+                  </span>
+                </div>
+              </label>
+
+              {wantToPerform && (
+                <div className="pt-2 border-t border-amber-200/60 animate-in fade-in duration-150">
+                  <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                    Type of Performance{" "}
+                    <span className="text-orange-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required={wantToPerform}
+                    value={performanceType}
+                    onChange={(e) => setPerformanceType(e.target.value)}
+                    placeholder="e.g., Punjabi Folk Singing, Solo Bhangra, Poetry / Shayari, Mimicry, Instrumental Music"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+                  />
+                  <p className="text-[10px] text-zinc-400 mt-1">
+                    Your performance request will be reviewed by the university
+                    committee once payment is verified.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* INTERACTION WITH VICE CHANCELLOR (Directly asked when attending) */}
+            <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/90 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={wantToInteractWithVC}
+                  onChange={(e) => setWantToInteractWithVC(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-zinc-300"
+                />
+                <div>
+                  <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    Option to interact with the Hon&apos;ble Vice Chancellor
+                  </span>
+                  <span className="text-[11px] text-zinc-500 block mt-0.5">
+                    Exclusive slot to meet the Vice Chancellor to discuss
+                    initiatives, university development, or mentorship.
+                  </span>
+                </div>
+              </label>
+
+              {wantToInteractWithVC && (
+                <div className="pt-2 border-t border-emerald-200/60 space-y-3 animate-in fade-in duration-150">
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      LinkedIn / Portfolio Link{" "}
+                      <span className="text-emerald-700">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required={wantToInteractWithVC}
+                      value={vcInteractionPortfolio}
+                      onChange={(e) =>
+                        setVcInteractionPortfolio(e.target.value)
+                      }
+                      placeholder="https://linkedin.com/in/yourprofile or portfolio URL"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-zinc-700 mb-1">
+                      Agenda/Reason for Interaction with Vice Chancellor{" "}
+                      <span className="text-emerald-700">*</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      required={wantToInteractWithVC}
+                      value={vcInteractionReason}
+                      onChange={(e) => setVcInteractionReason(e.target.value)}
+                      placeholder="Enter the reason / agenda you wish to discuss with the Hon'ble Vice Chancellor..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="p-3.5 rounded-2xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-500 flex items-center gap-2">
             <Info className="w-4 h-4 text-zinc-400 shrink-0" />
             <span>
-              Dining and guest seating options are hidden because you selected <strong>Register Information Only (No Attend)</strong>.
+              Dining and guest seating options are hidden because you selected{" "}
+              <strong>Register Information Only (No Attend)</strong>.
             </span>
           </div>
         )}
+
+        {/* Special Request Field (Optional, default "") */}
+        <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200 space-y-1.5">
+          <label className="block text-xs font-semibold text-zinc-700">
+            Special Request (Optional)
+          </label>
+          <input
+            type="text"
+            value={specialRequest}
+            onChange={(e) => setSpecialRequest(e.target.value)}
+            placeholder="Any special assistance, accessibility, dietary, or accommodation requirements..."
+            className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 bg-white"
+          />
+          <p className="text-[10px] text-zinc-400">
+            Default is blank ("") if you have no special requests.
+          </p>
+        </div>
 
         {/* Section 6: Alumni Memories Message */}
         <div className="space-y-4">
@@ -1078,7 +1407,9 @@ export default function RegistrationForm() {
           <div className="text-xs text-zinc-500 text-center sm:text-left space-y-0.5">
             <div>
               Selected Mode:{" "}
-              <strong className={attendMeet ? "text-orange-700" : "text-zinc-900"}>
+              <strong
+                className={attendMeet ? "text-orange-700" : "text-zinc-900"}
+              >
                 {attendMeet
                   ? "Register + Attend Meet (₹1,000 via UPI QR)"
                   : "Register Information Only (Free ₹0 • No Campus Entry)"}
