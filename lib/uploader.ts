@@ -4,16 +4,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 
-// const UPLOAD_DIR = "C:/Hosting/data/alumni";
-
-const UPLOAD_PUBLIC_DIR = path.join(process.cwd(), "public", "uploads");
-const UPLOAD_DATA_DIR = path.join(process.cwd(), "data");
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(process.cwd(), "data");
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
-  "image/jpg",
   "image/png",
   "image/webp",
   "image/gif",
@@ -25,56 +21,31 @@ export async function uploadFile(formData: FormData) {
     const file = formData.get("file");
 
     if (!(file instanceof File) || file.size === 0) {
-      return {
-        success: false,
-        path: null,
-        url: null,
-        error: "No file provided.",
-      };
+      throw new Error("No file provided.");
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      return {
-        success: false,
-        path: null,
-        url: null,
-        error: "File size must not exceed 10 MB.",
-      };
+      throw new Error("File size must not exceed 10 MB.");
     }
 
     if (!ALLOWED_TYPES.has(file.type.toLowerCase())) {
-      return {
-        success: false,
-        path: null,
-        url: null,
-        error: "File type is not allowed. Please upload a JPG, PNG, or WebP screenshot.",
-      };
+      throw new Error("File type is not allowed.");
     }
 
-    // Create the directories if they don't exist.
-    await mkdir(UPLOAD_PUBLIC_DIR, { recursive: true });
-    await mkdir(UPLOAD_DATA_DIR, { recursive: true });
+    await mkdir(UPLOAD_DIR, { recursive: true });
 
-    // Generate a unique filename to prevent collisions.
-    const extension = path.extname(file.name).toLowerCase() || ".png";
+    const extension = path.extname(file.name).toLowerCase();
     const filename = `${randomUUID()}${extension}`;
-    const publicPath = path.join(UPLOAD_PUBLIC_DIR, filename);
-    const dataPath = path.join(UPLOAD_DATA_DIR, filename);
+    const filePath = path.join(UPLOAD_DIR, filename);
 
-    // Save the file to both public/uploads and data directory.
     const buffer = Buffer.from(await file.arrayBuffer());
-    await writeFile(publicPath, buffer);
-    try {
-      await writeFile(dataPath, buffer);
-    } catch {
-      // ignore secondary save if data dir fails
-    }
+
+    await writeFile(filePath, buffer, { flag: "wx" });
 
     return {
       success: true,
-      path: publicPath,
+      path: `/data/${filename}`,
       filename,
-      url: `/uploads/${filename}`,
       error: null,
     };
   } catch (error) {
@@ -83,8 +54,8 @@ export async function uploadFile(formData: FormData) {
     return {
       success: false,
       path: null,
-      url: null,
-      error: "Failed to upload file.",
+      filename: null,
+      error: error instanceof Error ? error.message : "Failed to upload file.",
     };
   }
 }
