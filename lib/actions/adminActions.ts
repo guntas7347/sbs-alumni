@@ -11,8 +11,14 @@ import type { AuthorizedAdmin, AlumniRegistration } from "@/lib/types";
 const collectionName = "alumni_registrations_2026";
 
 export async function verifyAdminEmail(
-  email: string
-): Promise<{ authorized: boolean; role?: string; name?: string; isInitialBootstrap?: boolean; error?: string }> {
+  email: string,
+): Promise<{
+  authorized: boolean;
+  role?: string;
+  name?: string;
+  isInitialBootstrap?: boolean;
+  error?: string;
+}> {
   try {
     if (!email) return { authorized: false, error: "Email is required" };
 
@@ -33,7 +39,10 @@ export async function verifyAdminEmail(
         active: true,
       };
 
-      await db.collection("authorized_admins").doc(normalizedEmail).set(initialAdmin);
+      await db
+        .collection("authorized_admins")
+        .doc(normalizedEmail)
+        .set(initialAdmin);
 
       return {
         authorized: true,
@@ -44,7 +53,10 @@ export async function verifyAdminEmail(
     }
 
     // Check if this email exists as a doc or in documents
-    const docSnap = await db.collection("authorized_admins").doc(normalizedEmail).get();
+    const docSnap = await db
+      .collection("authorized_admins")
+      .doc(normalizedEmail)
+      .get();
 
     if (docSnap.exists) {
       const data = docSnap.data() as AuthorizedAdmin;
@@ -74,23 +86,37 @@ export async function verifyAdminEmail(
       };
     }
 
-    return { authorized: false, error: "This email is not authorized for administrator access." };
+    return {
+      authorized: false,
+      error: "This email is not authorized for administrator access.",
+    };
   } catch (error: any) {
     console.error("Error verifying admin email:", error);
-    return { authorized: false, error: error?.message || "Verification failed" };
+    return {
+      authorized: false,
+      error: error?.message || "Verification failed",
+    };
   }
 }
 
 export async function verifyFacultyOrAdmin(
-  email: string
-): Promise<{ authorized: boolean; role?: string; remark?: string; error?: string }> {
+  email: string,
+): Promise<{
+  authorized: boolean;
+  role?: string;
+  remark?: string;
+  error?: string;
+}> {
   try {
     if (!email) return { authorized: false, error: "Email is required" };
 
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check direct document ID lookup
-    const docSnap = await db.collection("authorized_admins").doc(normalizedEmail).get();
+    const docSnap = await db
+      .collection("authorized_admins")
+      .doc(normalizedEmail)
+      .get();
     if (docSnap.exists) {
       const data = docSnap.data() as AuthorizedAdmin;
       if (data.active !== false) {
@@ -122,7 +148,12 @@ export async function verifyFacultyOrAdmin(
     // If collection is completely empty, allow bootstrap
     const adminsSnapshot = await db.collection("authorized_admins").get();
     if (adminsSnapshot.empty) {
-      await addAuthorizedAdmin(normalizedEmail, "superadmin", "bootstrap", "Initial SuperAdmin");
+      await addAuthorizedAdmin(
+        normalizedEmail,
+        "superadmin",
+        "bootstrap",
+        "Initial SuperAdmin",
+      );
       return {
         authorized: true,
         role: "superadmin",
@@ -132,11 +163,15 @@ export async function verifyFacultyOrAdmin(
 
     return {
       authorized: false,
-      error: "Your Gmail has not been added as faculty or administrator by an admin.",
+      error:
+        "Your Gmail has not been added as faculty or administrator by an admin.",
     };
   } catch (error: any) {
     console.error("Error verifying faculty access:", error);
-    return { authorized: false, error: error?.message || "Verification failed." };
+    return {
+      authorized: false,
+      error: error?.message || "Verification failed.",
+    };
   }
 }
 
@@ -166,7 +201,10 @@ export async function getAuthorizedAdmins(): Promise<{
     return { success: true, data: admins };
   } catch (error: any) {
     console.error("Error getting authorized admins:", error);
-    return { success: false, error: error?.message || "Failed to fetch admins" };
+    return {
+      success: false,
+      error: error?.message || "Failed to fetch admins",
+    };
   }
 }
 
@@ -174,7 +212,7 @@ export async function addAuthorizedAdmin(
   email: string,
   role: "superadmin" | "admin" | "faculty" | "coordinator" = "faculty",
   addedBy: string = "superadmin",
-  remark?: string
+  remark?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!email) return { success: false, error: "Gmail ID is required" };
@@ -192,7 +230,10 @@ export async function addAuthorizedAdmin(
       active: true,
     };
 
-    await db.collection("authorized_admins").doc(normalizedEmail).set(adminData, { merge: true });
+    await db
+      .collection("authorized_admins")
+      .doc(normalizedEmail)
+      .set(adminData, { merge: true });
 
     return { success: true };
   } catch (error: any) {
@@ -202,7 +243,7 @@ export async function addAuthorizedAdmin(
 }
 
 export async function removeAuthorizedAdmin(
-  email: string
+  email: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!email) return { success: false, error: "Email is required" };
@@ -213,7 +254,10 @@ export async function removeAuthorizedAdmin(
     return { success: true };
   } catch (error: any) {
     console.error("Error removing authorized admin:", error);
-    return { success: false, error: error?.message || "Failed to remove admin" };
+    return {
+      success: false,
+      error: error?.message || "Failed to remove admin",
+    };
   }
 }
 
@@ -223,7 +267,7 @@ export async function updateRegistrationStatus(
     paymentStatus?: "completed" | "pending" | "failed";
     checkedIn?: boolean;
     adminNotes?: string;
-  }
+  },
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -245,12 +289,15 @@ export async function updateRegistrationStatus(
     return { success: true };
   } catch (error: any) {
     console.error("Error updating registration status:", error);
-    return { success: false, error: error?.message || "Failed to update registration status" };
+    return {
+      success: false,
+      error: error?.message || "Failed to update registration status",
+    };
   }
 }
 
 export async function deleteRegistration(
-  id: string
+  id: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -259,7 +306,10 @@ export async function deleteRegistration(
     return { success: true };
   } catch (error: any) {
     console.error("Error deleting registration:", error);
-    return { success: false, error: error?.message || "Failed to delete registration" };
+    return {
+      success: false,
+      error: error?.message || "Failed to delete registration",
+    };
   }
 }
 
@@ -271,7 +321,7 @@ export async function reviewPerformanceApplication(
   id: string,
   decision: "approved" | "rejected",
   adminRemarks?: string,
-  reviewedBy?: string
+  reviewedBy?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -302,7 +352,7 @@ export async function reviewPerformanceApplication(
  * Fetch all alumni who applied to perform on stage with their application details.
  */
 export async function getPerformanceApplications(
-  statusFilter: "all" | "pending" | "approved" | "rejected" = "all"
+  statusFilter: "all" | "pending" | "approved" | "rejected" = "all",
 ): Promise<{
   success: boolean;
   data?: any[];
@@ -320,7 +370,11 @@ export async function getPerformanceApplications(
       const data = doc.data();
       const perf = data.performanceApplication;
       if (perf && perf.applied) {
-        if (statusFilter === "all" || perf.status === statusFilter || data.performerStatus === statusFilter) {
+        if (
+          statusFilter === "all" ||
+          perf.status === statusFilter ||
+          data.performerStatus === statusFilter
+        ) {
           applications.push({
             id: doc.id,
             regNumber: data.regNumber,
@@ -333,7 +387,11 @@ export async function getPerformanceApplications(
             era: data.era,
             currentDesignation: data.currentDesignation,
             organization: data.organization,
-            hasPass: Boolean(data.hasPass || data.passStatus === "active" || data.paymentStatus === "completed"),
+            hasPass: Boolean(
+              data.hasPass ||
+              data.passStatus === "active" ||
+              data.paymentStatus === "completed",
+            ),
             passStatus: data.passStatus || "none",
             performerStatus: data.performerStatus || perf.status || "pending",
             performance: perf,
@@ -363,7 +421,7 @@ export async function verifyAlumniPayment(
   id: string,
   verified: boolean,
   adminNotes?: string,
-  verifiedBy?: string
+  verifiedBy?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -384,7 +442,7 @@ export async function verifyAlumniPayment(
         verified: true,
         hasPass: true,
         passStatus: "active",
-        amount: "1000",
+        amount: "500",
         verifiedBy: verifiedBy || "Admin",
         verifiedAt: now,
         updatedAt: now,
@@ -404,7 +462,7 @@ export async function verifyAlumniPayment(
           verified: true,
           hasPass: true,
           passStatus: "active",
-          amount: "1000",
+          amount: "500",
           verifiedBy: verifiedBy || "Admin",
           verifiedAt: now,
           txnId: regData?.txnId || "",
@@ -455,7 +513,7 @@ export async function verifyAlumniPayment(
 export async function issueComplimentaryPass(
   id: string,
   reason?: string,
-  issuedBy?: string
+  issuedBy?: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -526,7 +584,7 @@ export async function issueComplimentaryPass(
  * Revoke an event pass
  */
 export async function revokePass(
-  id: string
+  id: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -552,7 +610,7 @@ export async function revokePass(
  * Send an email reminder to a single alumnus who is in-person-pending (selected ₹1,000 but no proof uploaded).
  */
 export async function sendSinglePaymentProofReminder(
-  id: string
+  id: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -565,7 +623,10 @@ export async function sendSinglePaymentProofReminder(
 
     const regData = { id: docSnap.id, ...docSnap.data() } as AlumniRegistration;
     if (!regData.email) {
-      return { success: false, error: "Alumnus has no email address on record" };
+      return {
+        success: false,
+        error: "Alumnus has no email address on record",
+      };
     }
 
     const template = getPaymentProofReminderEmailTemplate(regData);
@@ -595,7 +656,7 @@ export async function sendSinglePaymentProofReminder(
  * Send bulk payment proof reminder emails to all (or specific) in-person-pending alumni.
  */
 export async function sendBulkPaymentProofReminders(
-  registrationIds?: string[]
+  registrationIds?: string[],
 ): Promise<{
   success: boolean;
   sentCount: number;
@@ -607,11 +668,13 @@ export async function sendBulkPaymentProofReminders(
 
     if (registrationIds && registrationIds.length > 0) {
       const docs = await Promise.all(
-        registrationIds.map((id) => db.collection(collectionName).doc(id).get())
+        registrationIds.map((id) =>
+          db.collection(collectionName).doc(id).get(),
+        ),
       );
       targets = docs
         .filter((d) => d.exists)
-        .map((d) => ({ id: d.id, ...d.data() } as AlumniRegistration));
+        .map((d) => ({ id: d.id, ...d.data() }) as AlumniRegistration);
     } else {
       // Query all records from collection
       const snapshot = await db.collection(collectionName).get();
@@ -620,7 +683,7 @@ export async function sendBulkPaymentProofReminders(
         const hasUploadedPayment = Boolean(
           d?.verified ||
           (d?.txnId && String(d.txnId).trim()) ||
-          (d?.screenshotUrl && String(d.screenshotUrl).trim())
+          (d?.screenshotUrl && String(d.screenshotUrl).trim()),
         );
         const isNonAttending =
           d?.attendanceType === "non-attending" ||
@@ -633,7 +696,7 @@ export async function sendBulkPaymentProofReminders(
             d?.attendanceType === "in-person-pending" ||
             d?.attendanceType === "attending" ||
             d?.attendanceType === "in-person" ||
-            d?.amount === "1000" ||
+            d?.amount === "500" ||
             d?.attendingMeet === true);
 
         if (isPending && d?.email) {
@@ -693,4 +756,3 @@ export async function sendBulkPaymentProofReminders(
     };
   }
 }
-

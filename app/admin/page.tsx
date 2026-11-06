@@ -497,7 +497,7 @@ export default function AdminRegistrationsPage() {
           verified: newStatus,
           hasPass: newStatus,
           passStatus: newStatus ? "active" : "none",
-          amount: newStatus ? "1000" : selectedReg.amount,
+          amount: newStatus ? "500" : selectedReg.amount,
         };
         setSelectedReg(updated);
         setRegistrations((prev) =>
@@ -1973,7 +1973,7 @@ export default function AdminRegistrationsPage() {
                             ...editForm,
                             attendanceType: val,
                             attendingMeet: val === "attending",
-                            amount: val === "non-attending" ? "0" : "1000",
+                            amount: val === "non-attending" ? "0" : "500",
                           });
                         }}
                         className="w-full sm:w-auto px-3 py-1.5 rounded-xl border border-zinc-300 font-semibold text-xs bg-white focus:outline-none focus:ring-2 focus:ring-orange-500"

@@ -231,7 +231,7 @@ export default function PassClient({
                   Registration Complete • Pass Pending
                 </span>
                 <h2 className="text-sm font-extrabold text-zinc-900">
-                  Campus Admission Pass Required (₹1,000)
+                  Campus Admission Pass Required (₹500)
                 </h2>
                 <p className="text-xs text-zinc-600 leading-relaxed">
                   You are registered in the SBSSU alumni records. To attend
@@ -247,7 +247,7 @@ export default function PassClient({
                 className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs shadow-xs transition-all"
               >
                 <Ticket className="w-4 h-4" />
-                Complete Pass Payment (₹1,000 via UPI QR)
+                Complete Pass Payment (₹500 via UPI QR)
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
@@ -493,7 +493,7 @@ export default function PassClient({
               </div>
             ) : (
               <div className="pt-2 border-t border-zinc-100 p-3 rounded-xl bg-zinc-50 text-center text-xs text-zinc-500">
-                Gate barcode will be activated upon ₹1,000 Event Pass payment.
+                Gate barcode will be activated upon ₹500 Event Pass payment.
               </div>
             )}
           </div>

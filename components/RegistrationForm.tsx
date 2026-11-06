@@ -93,7 +93,7 @@ export default function RegistrationForm() {
   const [newlyRegNumber, setNewlyRegNumber] = useState<string | null>(null);
   const [newlyRegAttending, setNewlyRegAttending] = useState<boolean>(true);
 
-  // PARTICIPATION CHOICE (Default: Register + Attend ₹1,000)
+  // PARTICIPATION CHOICE (Default: Register + Attend ₹500)
   const [attendMeet, setAttendMeet] = useState<boolean>(true);
 
   // Accompanying Guests state (Max 3, only Mom, Dad, Spouse, Child)
@@ -268,12 +268,12 @@ export default function RegistrationForm() {
           attendMeet && wantToInteractWithVC ? vcInteractionReason.trim() : "",
         specialRequest: specialRequest.trim(),
         memoriesMessage: f.memoriesMessage,
-        amount: attendMeet ? "1000" : "0",
+        amount: attendMeet ? "500" : "0",
       });
 
       if (res.success && res.id) {
         if (attendMeet) {
-          // If user chose to Attend (₹1,000), redirect immediately to UPI QR payment
+          // If user chose to Attend (₹500), redirect immediately to UPI QR payment
           router.push(`/sanjh-2026/payment/${res.id}`);
         } else {
           // If user chose "Register Only (No Attend)", show confirmation screen
@@ -344,7 +344,7 @@ export default function RegistrationForm() {
               Providing your information to the university alumni directory is{" "}
               <strong>100% Free</strong>. If you wish to physically visit the
               campus and attend the 1st Alumni Meet & Sanjh 2026 on Nov 14,
-              2026, an Event Pass is <strong>₹1,000</strong>.
+              2026, an Event Pass is <strong>₹500</strong>.
             </p>
           </div>
 
@@ -432,7 +432,7 @@ export default function RegistrationForm() {
             <p className="text-zinc-600">
               If you change your mind and wish to visit the campus, receive the
               souvenir kit, and attend the grand gala dinner, you can acquire
-              your <strong>Alumni Meet Event Pass (₹1,000)</strong> at any time.
+              your <strong>Alumni Meet Event Pass (₹500)</strong> at any time.
             </p>
           </div>
 
@@ -442,7 +442,7 @@ export default function RegistrationForm() {
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shadow-xs"
             >
               <Ticket className="w-4 h-4" />
-              Upgrade: Get Event Pass (₹1,000)
+              Upgrade: Get Event Pass (₹500)
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
@@ -506,7 +506,7 @@ export default function RegistrationForm() {
                 }`}
               >
                 {hasPass
-                  ? "✓ Active Pass (₹1,000 Paid)"
+                  ? "✓ Active Pass (₹500 Paid)"
                   : "No Pass Active (Registered Only)"}
               </span>
             </div>
@@ -539,7 +539,7 @@ export default function RegistrationForm() {
                 </strong>
                 <span className="text-zinc-600">
                   Your directory record is on file. To physically visit campus
-                  on Nov 14, 2026, get your official Event Pass for ₹1,000.
+                  on Nov 14, 2026, get your official Event Pass for ₹500.
                 </span>
               </div>
               <Link
@@ -547,7 +547,7 @@ export default function RegistrationForm() {
                 className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shrink-0 shadow-xs"
               >
                 <Sparkles className="w-4 h-4" />
-                Get Alumni Meet Pass (₹1,000)
+                Get Alumni Meet Pass (₹500)
               </Link>
             </div>
           )}
@@ -623,7 +623,7 @@ export default function RegistrationForm() {
               </div>
               <div className="p-3 rounded-xl bg-white/80 border border-orange-100 space-y-1">
                 <strong className="text-orange-900 font-bold block">
-                  2. Sanjh 2026 Event Pass (₹1,000):
+                  2. Sanjh 2026 Event Pass (₹500):
                 </strong>
                 <p className="text-zinc-600 text-[11px] leading-relaxed">
                   Required to attend the event on campus on Nov 14, 2026.
@@ -928,11 +928,11 @@ export default function RegistrationForm() {
               <div className="space-y-0.5">
                 <span className="text-sm font-bold text-zinc-900 block">
                   I want to Register & Attend the Alumni Meet on Campus (Event
-                  Pass: ₹1,000)
+                  Pass: ₹500)
                 </span>
                 <p className="text-xs text-zinc-500">
                   {attendMeet
-                    ? "Checked: You will be issued an official Event Pass for ₹1,000 to visit campus on Nov 14, 2026."
+                    ? "Checked: You will be issued an official Event Pass for ₹500 to visit campus on Nov 14, 2026."
                     : "Unchecked: You are registering directory information only. You will NOT attend the meet."}
                 </p>
               </div>
@@ -941,7 +941,7 @@ export default function RegistrationForm() {
 
           {/* Two Interactive Selection Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Card 1: Register + Attend (₹1,000) - DEFAULT */}
+            {/* Card 1: Register + Attend (₹500) - DEFAULT */}
             <div
               onClick={() => setAttendMeet(true)}
               className={`p-5 rounded-2xl border-2 transition-all cursor-pointer relative flex flex-col justify-between space-y-4 ${
@@ -1006,7 +1006,7 @@ export default function RegistrationForm() {
                   Pass Fee:
                 </span>
                 <span className="text-lg font-black text-orange-600">
-                  ₹1,000{" "}
+                  ₹500{" "}
                   <span className="text-xs font-normal text-zinc-500">
                     (UPI QR)
                   </span>
@@ -1103,7 +1103,7 @@ export default function RegistrationForm() {
                   for November 14, 2026.
                 </strong>{" "}
                 If you later wish to attend, you can purchase an Event Pass
-                (₹1,000) from your profile card.
+                (₹500) from your profile card.
               </p>
             </div>
           )}
@@ -1418,7 +1418,7 @@ export default function RegistrationForm() {
                 className={attendMeet ? "text-orange-700" : "text-zinc-900"}
               >
                 {attendMeet
-                  ? "Register + Attend Meet (₹1,000 via UPI QR)"
+                  ? "Register + Attend Meet (₹500 via UPI QR)"
                   : "Register Information Only (Free ₹0 • No Campus Entry)"}
               </strong>
             </div>
@@ -1446,7 +1446,7 @@ export default function RegistrationForm() {
             ) : attendMeet ? (
               <>
                 <Ticket className="w-4 h-4" />
-                <span>Proceed to Pass Payment (₹1,000)</span>
+                <span>Proceed to Pass Payment (₹500)</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             ) : (

@@ -36,7 +36,7 @@ export interface AlumniRegistration {
   attendanceType: "pending" | "non-attending" | "attending";
   hasPass: boolean;
   passStatus: string; // "none" | "active" | "cancelled" | "pending"
-  amount: string; // "1000" or "0"
+  amount: string; // "500" or "0"
 
   // 4. Special Request Field (Default "")
   specialRequest?: string;

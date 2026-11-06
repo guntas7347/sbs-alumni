@@ -185,7 +185,7 @@ export default function TicketClient({
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-all shadow-xs"
             >
               <Ticket className="w-4 h-4" />
-              Get Sanjh 2026 Meet Pass (₹1,000)
+              Get Sanjh 2026 Meet Pass (₹500)
             </Link>
           )}
         </div>
@@ -209,7 +209,7 @@ export default function TicketClient({
                 Your details are registered with the university database. If you
                 plan to attend the <strong>1st Alumni Meet & Sanjh 2026</strong>{" "}
                 in-person on campus on <strong>November 14, 2026</strong>, you
-                must purchase an official <strong>Event Pass (₹1,000)</strong>.
+                must purchase an official <strong>Event Pass (₹500)</strong>.
                 The pass includes gala dinner, high tea, souvenir kit,
                 auditorium seating, and eligibility to apply to perform on
                 stage!
@@ -223,7 +223,7 @@ export default function TicketClient({
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs transition-colors shadow-xs"
             >
               <Ticket className="w-4 h-4" />
-              Buy Sanjh 2026 Event Pass (₹1,000)
+              Buy Sanjh 2026 Event Pass (₹500)
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -271,7 +271,7 @@ export default function TicketClient({
                 }`}
               >
                 {hasPass
-                  ? "✓ Verified Meet Pass (₹1,000)"
+                  ? "✓ Verified Meet Pass (₹500)"
                   : "Alumni Registered (No Pass)"}
               </span>
               <div className="text-[11px] font-mono font-bold text-amber-200 mt-1">
@@ -465,7 +465,7 @@ export default function TicketClient({
             </div>
           ) : (
             <div className="pt-4 border-t border-zinc-100 p-4 rounded-2xl bg-zinc-50 text-center text-xs text-zinc-500">
-              Pass barcode will be activated upon purchase of the ₹1,000 Event
+              Pass barcode will be activated upon purchase of the ₹500 Event
               Pass.
             </div>
           )}

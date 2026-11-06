@@ -37,7 +37,13 @@ export default function RegistrationsTable({
   initialFilter = "all",
 }: {
   title?: string;
-  initialFilter?: "all" | "pass" | "free" | "performers" | "pending_upi" | "duplicates";
+  initialFilter?:
+    | "all"
+    | "pass"
+    | "free"
+    | "performers"
+    | "pending_upi"
+    | "duplicates";
 }) {
   const [registrations, setRegistrations] = useState<AlumniRegistration[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +55,9 @@ export default function RegistrationsTable({
   const [tabFilter, setTabFilter] = useState<
     "all" | "pass" | "free" | "performers" | "pending_upi" | "duplicates"
   >(initialFilter);
-  const [checkInFilter, setCheckInFilter] = useState<"all" | "checkedIn" | "notCheckedIn">("all");
+  const [checkInFilter, setCheckInFilter] = useState<
+    "all" | "checkedIn" | "notCheckedIn"
+  >("all");
 
   // Screenshot viewer modal
   const [viewScreenshot, setViewScreenshot] = useState<{
@@ -103,14 +111,17 @@ export default function RegistrationsTable({
   const counts = useMemo(() => {
     const total = registrations.length;
     const passCount = registrations.filter(
-      (r) => r.hasPass || r.passStatus === "active" || r.paymentStatus === "completed"
+      (r) =>
+        r.hasPass ||
+        r.passStatus === "active" ||
+        r.paymentStatus === "completed",
     ).length;
     const freeCount = total - passCount;
     const performerCount = registrations.filter(
-      (r) => r.performerStatus && r.performerStatus !== "none"
+      (r) => r.performerStatus && r.performerStatus !== "none",
     ).length;
     const pendingUpiCount = registrations.filter(
-      (r) => r.txnId && !r.verified && r.paymentStatus !== "completed"
+      (r) => r.txnId && !r.verified && r.paymentStatus !== "completed",
     ).length;
 
     return {
@@ -140,17 +151,25 @@ export default function RegistrationsTable({
 
       // Pass / Tab filter
       const hasPass = Boolean(
-        reg.hasPass || reg.passStatus === "active" || reg.paymentStatus === "completed"
+        reg.hasPass ||
+        reg.passStatus === "active" ||
+        reg.paymentStatus === "completed",
       );
-      const isPendingUpi = Boolean(reg.txnId && !reg.verified && reg.paymentStatus !== "completed");
+      const isPendingUpi = Boolean(
+        reg.txnId && !reg.verified && reg.paymentStatus !== "completed",
+      );
       const normalizedTxn = reg.txnId?.trim().toLowerCase() || "";
-      const isDuplicate = Boolean(normalizedTxn && duplicateTxnMap[normalizedTxn] > 1);
+      const isDuplicate = Boolean(
+        normalizedTxn && duplicateTxnMap[normalizedTxn] > 1,
+      );
 
       let matchesTab = true;
       if (tabFilter === "pass") matchesTab = hasPass;
       else if (tabFilter === "free") matchesTab = !hasPass;
       else if (tabFilter === "performers")
-        matchesTab = Boolean(reg.performerStatus && reg.performerStatus !== "none");
+        matchesTab = Boolean(
+          reg.performerStatus && reg.performerStatus !== "none",
+        );
       else if (tabFilter === "pending_upi") matchesTab = isPendingUpi;
       else if (tabFilter === "duplicates") matchesTab = isDuplicate;
 
@@ -159,8 +178,8 @@ export default function RegistrationsTable({
         checkInFilter === "all"
           ? true
           : checkInFilter === "checkedIn"
-          ? reg.checkedIn
-          : !reg.checkedIn;
+            ? reg.checkedIn
+            : !reg.checkedIn;
 
       return matchesSearch && matchesTab && matchesCheckIn;
     });
@@ -169,7 +188,7 @@ export default function RegistrationsTable({
   // Handle Verify / Unverify toggle
   const handleToggleVerifyPayment = async (
     reg: AlumniRegistration,
-    targetVerified: boolean
+    targetVerified: boolean,
   ) => {
     if (actingOnId) return;
 
@@ -181,7 +200,12 @@ export default function RegistrationsTable({
 
     setActingOnId(reg.id);
     try {
-      const res = await verifyAlumniPayment(reg.id, targetVerified, "", "Admin");
+      const res = await verifyAlumniPayment(
+        reg.id,
+        targetVerified,
+        "",
+        "Admin",
+      );
       if (res.success) {
         // Update local state
         setRegistrations((prev) =>
@@ -193,10 +217,10 @@ export default function RegistrationsTable({
                   hasPass: targetVerified,
                   passStatus: targetVerified ? "active" : "none",
                   paymentStatus: targetVerified ? "completed" : "pending",
-                  amount: targetVerified ? "1000" : r.amount,
+                  amount: targetVerified ? "500" : r.amount,
                 }
-              : r
-          )
+              : r,
+          ),
         );
 
         if (viewScreenshot && viewScreenshot.reg.id === reg.id) {
@@ -237,7 +261,7 @@ export default function RegistrationsTable({
       "Attending Meet",
       "Guest Count",
       "Accompanying Family Guests (Mom/Dad/Spouse/Child)",
-      "Has Event Pass (₹1000)",
+      "Has Event Pass (₹500)",
       "Pass Status",
       "Payment Verified",
       "UPI Txn ID",
@@ -251,10 +275,14 @@ export default function RegistrationsTable({
 
     const rows = filteredRegistrations.map((r) => {
       const hasPass = Boolean(
-        r.hasPass || r.passStatus === "active" || r.paymentStatus === "completed"
+        r.hasPass ||
+        r.passStatus === "active" ||
+        r.paymentStatus === "completed",
       );
       const normalizedTxn = r.txnId?.trim().toLowerCase() || "";
-      const isDupe = Boolean(normalizedTxn && duplicateTxnMap[normalizedTxn] > 1);
+      const isDupe = Boolean(
+        normalizedTxn && duplicateTxnMap[normalizedTxn] > 1,
+      );
 
       const guestsFormatted =
         r.guests && r.guests.length > 0
@@ -297,7 +325,7 @@ export default function RegistrationsTable({
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `sbssu_alumni_registrations_${new Date().toISOString().slice(0, 10)}.csv`
+      `sbssu_alumni_registrations_${new Date().toISOString().slice(0, 10)}.csv`,
     );
     document.body.appendChild(link);
     link.click();
@@ -317,7 +345,8 @@ export default function RegistrationsTable({
             {title}
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 mt-1">
-            Manual verification console for UPI QR payments, duplicate Txn ID detection, and digital pass management.
+            Manual verification console for UPI QR payments, duplicate Txn ID
+            detection, and digital pass management.
           </p>
         </div>
 
@@ -328,7 +357,9 @@ export default function RegistrationsTable({
             className="p-2.5 rounded-xl border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 transition-colors shadow-2xs"
             title="Refresh from Firestore"
           >
-            <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin text-orange-600" : ""}`} />
+            <RefreshCw
+              className={`w-4 h-4 ${refreshing ? "animate-spin text-orange-600" : ""}`}
+            />
           </button>
 
           <button
@@ -357,7 +388,9 @@ export default function RegistrationsTable({
                 </span>
               </h3>
               <p className="text-xs text-rose-800">
-                Multiple registrations share identical UPI Transaction IDs. Check screenshots carefully to avoid approving fraudulent submissions. Duplicate rows are highlighted in red below.
+                Multiple registrations share identical UPI Transaction IDs.
+                Check screenshots carefully to avoid approving fraudulent
+                submissions. Duplicate rows are highlighted in red below.
               </p>
             </div>
           </div>
@@ -547,12 +580,16 @@ export default function RegistrationsTable({
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-2">
             <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
-            <p className="text-xs text-zinc-500">Loading registrations from Firestore...</p>
+            <p className="text-xs text-zinc-500">
+              Loading registrations from Firestore...
+            </p>
           </div>
         ) : filteredRegistrations.length === 0 ? (
           <div className="py-20 text-center space-y-2">
             <Users className="w-10 h-10 text-zinc-300 mx-auto" />
-            <h3 className="font-bold text-zinc-700 text-sm">No records match filter criteria</h3>
+            <h3 className="font-bold text-zinc-700 text-sm">
+              No records match filter criteria
+            </h3>
             <p className="text-xs text-zinc-400">
               Try resetting the tab filter or search query.
             </p>
@@ -575,12 +612,18 @@ export default function RegistrationsTable({
               <tbody className="divide-y divide-zinc-100">
                 {filteredRegistrations.map((reg) => {
                   const hasPass = Boolean(
-                    reg.hasPass || reg.passStatus === "active" || reg.paymentStatus === "completed"
+                    reg.hasPass ||
+                    reg.passStatus === "active" ||
+                    reg.paymentStatus === "completed",
                   );
                   const isVerified = Boolean(reg.verified === true);
                   const normalizedTxn = reg.txnId?.trim().toLowerCase() || "";
-                  const isDuplicate = Boolean(normalizedTxn && duplicateTxnMap[normalizedTxn] > 1);
-                  const dupeCount = isDuplicate ? duplicateTxnMap[normalizedTxn] : 0;
+                  const isDuplicate = Boolean(
+                    normalizedTxn && duplicateTxnMap[normalizedTxn] > 1,
+                  );
+                  const dupeCount = isDuplicate
+                    ? duplicateTxnMap[normalizedTxn]
+                    : 0;
                   const isProcessing = actingOnId === reg.id;
 
                   return (
@@ -612,7 +655,9 @@ export default function RegistrationsTable({
 
                       {/* Column 2: Name */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-zinc-900">{reg.fullName}</div>
+                        <div className="font-bold text-zinc-900">
+                          {reg.fullName}
+                        </div>
                         {reg.rollNumber && (
                           <div className="text-[10px] font-mono text-zinc-400">
                             Roll: {reg.rollNumber}
@@ -635,10 +680,13 @@ export default function RegistrationsTable({
                         {reg.guests && reg.guests.length > 0 && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             <span
-                              title={reg.guests.map((g) => `${g.name} (${g.relation})`).join(", ")}
+                              title={reg.guests
+                                .map((g) => `${g.name} (${g.relation})`)
+                                .join(", ")}
                               className="inline-flex items-center gap-1 text-[9px] bg-orange-50 text-orange-800 font-medium px-1.5 py-0.5 rounded border border-orange-200 cursor-help"
                             >
-                              +{reg.guests.length} Guest{reg.guests.length > 1 ? "s" : ""}
+                              +{reg.guests.length} Guest
+                              {reg.guests.length > 1 ? "s" : ""}
                             </span>
                           </div>
                         )}
@@ -647,7 +695,9 @@ export default function RegistrationsTable({
                       {/* Column 3: Contact */}
                       <td className="py-3.5 px-4">
                         <div className="text-zinc-700">{reg.email}</div>
-                        <div className="text-[11px] text-zinc-400">{reg.phone}</div>
+                        <div className="text-[11px] text-zinc-400">
+                          {reg.phone}
+                        </div>
                       </td>
 
                       {/* Column 4: Academic */}
@@ -680,7 +730,8 @@ export default function RegistrationsTable({
 
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] text-zinc-500">
-                                Mode: <strong>{reg.paymentMode || "UPI_QR"}</strong>
+                                Mode:{" "}
+                                <strong>{reg.paymentMode || "UPI_QR"}</strong>
                               </span>
 
                               {/* Screenshot viewer button */}
@@ -734,7 +785,9 @@ export default function RegistrationsTable({
                               <button
                                 type="button"
                                 disabled={isProcessing}
-                                onClick={() => handleToggleVerifyPayment(reg, false)}
+                                onClick={() =>
+                                  handleToggleVerifyPayment(reg, false)
+                                }
                                 className="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 hover:bg-rose-100 text-zinc-600 hover:text-rose-800 border border-zinc-200 transition-colors"
                                 title="Click to unverify and revoke pass"
                               >
@@ -745,7 +798,9 @@ export default function RegistrationsTable({
                             <button
                               type="button"
                               disabled={isProcessing}
-                              onClick={() => handleToggleVerifyPayment(reg, true)}
+                              onClick={() =>
+                                handleToggleVerifyPayment(reg, true)
+                              }
                               className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold bg-amber-500 hover:bg-emerald-600 text-white transition-colors shadow-2xs"
                             >
                               {isProcessing ? (
@@ -756,7 +811,9 @@ export default function RegistrationsTable({
                               <span>Verify & Issue</span>
                             </button>
                           ) : (
-                            <span className="text-zinc-400 text-[10px]">Unpaid</span>
+                            <span className="text-zinc-400 text-[10px]">
+                              Unpaid
+                            </span>
                           )}
                         </div>
                       </td>
@@ -804,14 +861,22 @@ export default function RegistrationsTable({
 
             {/* Duplicate Alert in Modal if applicable */}
             {viewScreenshot.reg.txnId &&
-              duplicateTxnMap[viewScreenshot.reg.txnId.trim().toLowerCase()] > 1 && (
+              duplicateTxnMap[viewScreenshot.reg.txnId.trim().toLowerCase()] >
+                1 && (
                 <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-950 text-xs flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
                   <div>
                     <strong>CRITICAL WARNING: DUPLICATE TRANSACTION ID!</strong>
                     <p className="text-[11px] text-rose-800">
-                      The Transaction ID <code>{viewScreenshot.reg.txnId}</code> is submitted by{" "}
-                      {duplicateTxnMap[viewScreenshot.reg.txnId.trim().toLowerCase()]} different applicants. Verify if this receipt was previously claimed!
+                      The Transaction ID <code>{viewScreenshot.reg.txnId}</code>{" "}
+                      is submitted by{" "}
+                      {
+                        duplicateTxnMap[
+                          viewScreenshot.reg.txnId.trim().toLowerCase()
+                        ]
+                      }{" "}
+                      different applicants. Verify if this receipt was
+                      previously claimed!
                     </p>
                   </div>
                 </div>
@@ -820,29 +885,41 @@ export default function RegistrationsTable({
             {/* Metadata Summary */}
             <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-zinc-50 border border-zinc-200 text-xs">
               <div>
-                <span className="text-zinc-400 block text-[10px]">Entered Txn ID:</span>
+                <span className="text-zinc-400 block text-[10px]">
+                  Entered Txn ID:
+                </span>
                 <span className="font-mono font-bold text-zinc-900">
                   {viewScreenshot.reg.txnId || "None"}
                 </span>
               </div>
               <div>
-                <span className="text-zinc-400 block text-[10px]">Payment Mode:</span>
+                <span className="text-zinc-400 block text-[10px]">
+                  Payment Mode:
+                </span>
                 <span className="font-semibold text-zinc-800">
                   {viewScreenshot.reg.paymentMode || "UPI_QR"} (₹1,000)
                 </span>
               </div>
               <div>
-                <span className="text-zinc-400 block text-[10px]">Current Verification:</span>
+                <span className="text-zinc-400 block text-[10px]">
+                  Current Verification:
+                </span>
                 <span
                   className={`font-bold ${
-                    viewScreenshot.reg.verified ? "text-emerald-700" : "text-amber-700"
+                    viewScreenshot.reg.verified
+                      ? "text-emerald-700"
+                      : "text-amber-700"
                   }`}
                 >
-                  {viewScreenshot.reg.verified ? "✓ Verified" : "⏳ Pending Verification"}
+                  {viewScreenshot.reg.verified
+                    ? "✓ Verified"
+                    : "⏳ Pending Verification"}
                 </span>
               </div>
               <div>
-                <span className="text-zinc-400 block text-[10px]">Attendee Email:</span>
+                <span className="text-zinc-400 block text-[10px]">
+                  Attendee Email:
+                </span>
                 <span className="font-mono text-[11px] text-zinc-800 truncate block">
                   {viewScreenshot.reg.email}
                 </span>
@@ -876,7 +953,9 @@ export default function RegistrationsTable({
                   <button
                     type="button"
                     disabled={actingOnId === viewScreenshot.reg.id}
-                    onClick={() => handleToggleVerifyPayment(viewScreenshot.reg, false)}
+                    onClick={() =>
+                      handleToggleVerifyPayment(viewScreenshot.reg, false)
+                    }
                     className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 transition-colors"
                   >
                     Unverify Payment
@@ -885,7 +964,9 @@ export default function RegistrationsTable({
                   <button
                     type="button"
                     disabled={actingOnId === viewScreenshot.reg.id}
-                    onClick={() => handleToggleVerifyPayment(viewScreenshot.reg, true)}
+                    onClick={() =>
+                      handleToggleVerifyPayment(viewScreenshot.reg, true)
+                    }
                     className="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex items-center gap-1.5 shadow-xs"
                   >
                     <Check className="w-4 h-4" />

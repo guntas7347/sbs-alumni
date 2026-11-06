@@ -557,7 +557,7 @@ export default function VerifyClient() {
               ) ? (
                 <span className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300 flex items-center gap-1.5">
                   <Ticket className="w-3.5 h-3.5 text-emerald-700" />
-                  Pass Active (₹1,000 Paid)
+                  Pass Active (₹500 Paid)
                 </span>
               ) : (
                 <span className="px-3 py-1.5 rounded-xl bg-amber-100 text-amber-900 font-bold text-xs border border-amber-300 flex items-center gap-1.5">
@@ -591,7 +591,7 @@ export default function VerifyClient() {
                 <p className="text-zinc-700">
                   This alumnus has registered their details in the university
                   directory (Free), but has <strong>NOT</strong> purchased the
-                  Sanjh 2026 Event Pass (₹1,000). Gate admission and dinner
+                  Sanjh 2026 Event Pass (₹500). Gate admission and dinner
                   coupons require an active pass.
                 </p>
                 <Link
@@ -599,7 +599,7 @@ export default function VerifyClient() {
                   target="_blank"
                   className="inline-flex items-center gap-1.5 font-bold text-orange-700 hover:underline pt-1"
                 >
-                  Complete ₹1,000 Payment via Razorpay{" "}
+                  Complete ₹500 Payment via Razorpay{" "}
                   <ExternalLink className="w-3 h-3" />
                 </Link>
               </div>

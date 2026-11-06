@@ -37,28 +37,34 @@ export async function createAlumniRegistration(
     }
 
     const currentYear = new Date().getFullYear();
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const randomSuffix = Math.floor(500 + Math.random() * 9000);
     const regNumber = `SBSSU-ALM-${currentYear}-${randomSuffix}`;
     const now = new Date().toISOString();
 
     // User is ONLY officially marked as attending if payment proof (screenshot & txnId) is uploaded
     const hasUploadedPayment = Boolean(
-      input.txnId && input.txnId.trim() &&
-      input.screenshotUrl && input.screenshotUrl.trim()
+      input.txnId &&
+      input.txnId.trim() &&
+      input.screenshotUrl &&
+      input.screenshotUrl.trim(),
     );
 
     // 3 distinct states: "pending" | "non-attending" | "attending"
-    const attendanceType: "pending" | "non-attending" | "attending" = hasUploadedPayment
-      ? "attending"
-      : input.attendanceType === "non-attending"
-      ? "non-attending"
-      : "pending";
+    const attendanceType: "pending" | "non-attending" | "attending" =
+      hasUploadedPayment
+        ? "attending"
+        : input.attendanceType === "non-attending"
+          ? "non-attending"
+          : "pending";
 
     const isAttending = attendanceType === "attending";
     const isMeetParticipant = attendanceType !== "non-attending";
 
     // Validate accompanying guests (max 3, only Mom, Dad, Spouse, Child)
-    let validatedGuests: { name: string; relation: "Mom" | "Dad" | "Spouse" | "Child" }[] = [];
+    let validatedGuests: {
+      name: string;
+      relation: "Mom" | "Dad" | "Spouse" | "Child";
+    }[] = [];
     if (isMeetParticipant && input.guests && input.guests.length > 0) {
       if (input.guests.length > 3) {
         return {
@@ -90,12 +96,18 @@ export async function createAlumniRegistration(
     }
 
     // Extract and flatten guests (up to 3, Mom/Dad/Spouse/Child)
-    const guest1Name = input.guest1Name?.trim() || (validatedGuests[0]?.name || "");
-    const guest1Relation = input.guest1Relation || (validatedGuests[0]?.relation || "");
-    const guest2Name = input.guest2Name?.trim() || (validatedGuests[1]?.name || "");
-    const guest2Relation = input.guest2Relation || (validatedGuests[1]?.relation || "");
-    const guest3Name = input.guest3Name?.trim() || (validatedGuests[2]?.name || "");
-    const guest3Relation = input.guest3Relation || (validatedGuests[2]?.relation || "");
+    const guest1Name =
+      input.guest1Name?.trim() || validatedGuests[0]?.name || "";
+    const guest1Relation =
+      input.guest1Relation || validatedGuests[0]?.relation || "";
+    const guest2Name =
+      input.guest2Name?.trim() || validatedGuests[1]?.name || "";
+    const guest2Relation =
+      input.guest2Relation || validatedGuests[1]?.relation || "";
+    const guest3Name =
+      input.guest3Name?.trim() || validatedGuests[2]?.name || "";
+    const guest3Relation =
+      input.guest3Relation || validatedGuests[2]?.relation || "";
 
     const guestListStr: string[] = [];
     if (guest1Name) guestListStr.push(`1. ${guest1Name} (${guest1Relation})`);
@@ -106,13 +118,21 @@ export async function createAlumniRegistration(
 
     // Stage Performance Request
     const wantToPerform = Boolean(isMeetParticipant && input.wantToPerform);
-    const performanceType = wantToPerform ? (input.performanceType?.trim() || "") : "";
+    const performanceType = wantToPerform
+      ? input.performanceType?.trim() || ""
+      : "";
     const performanceStatus = wantToPerform ? "pending" : "none";
 
     // Vice Chancellor Interaction Request
-    const wantToInteractWithVC = Boolean(isMeetParticipant && input.wantToInteractWithVC);
-    const vcInteractionPortfolio = wantToInteractWithVC ? (input.vcInteractionPortfolio?.trim() || "") : "";
-    const vcInteractionReason = wantToInteractWithVC ? (input.vcInteractionReason?.trim() || "") : "";
+    const wantToInteractWithVC = Boolean(
+      isMeetParticipant && input.wantToInteractWithVC,
+    );
+    const vcInteractionPortfolio = wantToInteractWithVC
+      ? input.vcInteractionPortfolio?.trim() || ""
+      : "";
+    const vcInteractionReason = wantToInteractWithVC
+      ? input.vcInteractionReason?.trim() || ""
+      : "";
     const vcInteractionStatus = wantToInteractWithVC ? "pending" : "none";
 
     // Special Request (Default "")
@@ -142,7 +162,7 @@ export async function createAlumniRegistration(
       attendanceType,
       hasPass: false,
       passStatus: "none",
-      amount: attendanceType === "non-attending" ? "0" : "1000",
+      amount: attendanceType === "non-attending" ? "0" : "500",
 
       specialRequest,
 
@@ -221,13 +241,17 @@ export async function createAlumniRegistration(
  * 2. "pending": Chose to attend (₹1,000), but awaiting payment proof submission.
  * 3. "non-attending": Registered for alumni directory only (Free).
  */
-function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration {
+function normalizeRegistrationRecord(
+  id: string,
+  data: any,
+): AlumniRegistration {
   const hasUploadedPayment = Boolean(
     data?.verified ||
     (data?.txnId && String(data.txnId).trim()) ||
     (data?.screenshotUrl && String(data.screenshotUrl).trim()) ||
     (data?.paymentScreenshotUrl && String(data.paymentScreenshotUrl).trim()) ||
-    (data?.paymentDetails?.screenshotUrl && String(data.paymentDetails.screenshotUrl).trim())
+    (data?.paymentDetails?.screenshotUrl &&
+      String(data.paymentDetails.screenshotUrl).trim()),
   );
 
   let attendanceType: "pending" | "non-attending" | "attending";
@@ -251,7 +275,7 @@ function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration 
     // Marked attending but payment proof not yet uploaded -> pending
     attendanceType = "pending";
   } else if (
-    data?.amount === "1000" ||
+    data?.amount === "500" ||
     data?.attendingMeet === true ||
     (data?.guestCount && data.guestCount !== "0" && data.guestCount !== 0) ||
     (data?.guest1Name && String(data.guest1Name).trim() !== "")
@@ -267,7 +291,7 @@ function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration 
   const hasPass = Boolean(
     data?.hasPass === true ||
     data?.passStatus === "active" ||
-    data?.paymentStatus === "completed"
+    data?.paymentStatus === "completed",
   );
 
   return {
@@ -275,13 +299,16 @@ function normalizeRegistrationRecord(id: string, data: any): AlumniRegistration 
     id,
     attendingMeet: isAttending,
     attendanceType,
-    amount: attendanceType === "non-attending" ? "0" : "1000",
+    amount: attendanceType === "non-attending" ? "0" : "500",
     hasPass,
     passStatus: data?.passStatus || (hasPass ? "active" : "none"),
-    passPrice: attendanceType === "non-attending" ? 0 : 1000,
+    passPrice: attendanceType === "non-attending" ? 0 : 500,
     performerStatus: data?.performerStatus || "none",
     txnId: data?.txnId || data?.paymentDetails?.transactionId || "",
-    paymentMode: data?.paymentMode || data?.paymentDetails?.paymentMethod || (attendanceType !== "non-attending" ? "UPI_QR" : ""),
+    paymentMode:
+      data?.paymentMode ||
+      data?.paymentDetails?.paymentMethod ||
+      (attendanceType !== "non-attending" ? "UPI_QR" : ""),
     verified: data?.verified ?? data?.paymentDetails?.verified ?? false,
     screenshotUrl:
       data?.screenshotUrl ||
@@ -536,9 +563,9 @@ export async function submitUpiPayment({
       verified: false,
       screenshotUrl: screenshotUrl.trim(),
       paymentScreenshotUrl: screenshotUrl.trim(),
-      amount: "1000",
+      amount: "500",
       paymentStatus: "pending",
-      passPrice: 1000,
+      passPrice: 500,
       hasPass: false,
       passStatus: "none",
       paymentDetails: {
@@ -563,7 +590,7 @@ export async function submitUpiPayment({
         verified: false,
         screenshotUrl: screenshotUrl.trim(),
         paymentScreenshotUrl: screenshotUrl.trim(),
-        amount: "1000",
+        amount: "500",
         paymentStatus: "pending",
       } as unknown as AlumniRegistration;
 
@@ -612,9 +639,9 @@ export async function updateAlumniPayment(
       .update({
         hasPass: true,
         passStatus: "active",
-        passPrice: 1000,
+        passPrice: 500,
         passIssuedAt: now,
-        amount: 1000,
+        amount: 500,
         paymentStatus: "completed",
         paymentDetails: {
           ...paymentDetails,
@@ -779,8 +806,10 @@ export async function getRegistrationStats(): Promise<{
         data?.verified ||
         (data?.txnId && String(data.txnId).trim()) ||
         (data?.screenshotUrl && String(data.screenshotUrl).trim()) ||
-        (data?.paymentScreenshotUrl && String(data.paymentScreenshotUrl).trim()) ||
-        (data?.paymentDetails?.screenshotUrl && String(data.paymentDetails.screenshotUrl).trim())
+        (data?.paymentScreenshotUrl &&
+          String(data.paymentScreenshotUrl).trim()) ||
+        (data?.paymentDetails?.screenshotUrl &&
+          String(data.paymentDetails.screenshotUrl).trim()),
       );
       const isAttending = Boolean(data?.attendingMeet && hasUploadedPayment);
 
@@ -792,7 +821,7 @@ export async function getRegistrationStats(): Promise<{
 
       if (hasPass) {
         passHolders += 1;
-        totalRevenue += Number(data.amount || 1000);
+        totalRevenue += Number(data.amount || 500);
       } else {
         registeredOnly += 1;
       }
@@ -845,7 +874,7 @@ export async function getRegistrationStats(): Promise<{
  */
 export async function updateRegistrationDetails(
   id: string,
-  updates: Partial<AlumniRegistration>
+  updates: Partial<AlumniRegistration>,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -871,11 +900,14 @@ export async function updateRegistrationDetails(
       cleanUpdates.guest3Name !== undefined
     ) {
       const g1 = cleanUpdates.guest1Name ?? docSnap.data()?.guest1Name ?? "";
-      const r1 = cleanUpdates.guest1Relation ?? docSnap.data()?.guest1Relation ?? "";
+      const r1 =
+        cleanUpdates.guest1Relation ?? docSnap.data()?.guest1Relation ?? "";
       const g2 = cleanUpdates.guest2Name ?? docSnap.data()?.guest2Name ?? "";
-      const r2 = cleanUpdates.guest2Relation ?? docSnap.data()?.guest2Relation ?? "";
+      const r2 =
+        cleanUpdates.guest2Relation ?? docSnap.data()?.guest2Relation ?? "";
       const g3 = cleanUpdates.guest3Name ?? docSnap.data()?.guest3Name ?? "";
-      const r3 = cleanUpdates.guest3Relation ?? docSnap.data()?.guest3Relation ?? "";
+      const r3 =
+        cleanUpdates.guest3Relation ?? docSnap.data()?.guest3Relation ?? "";
 
       const gList: string[] = [];
       if (g1) gList.push(`1. ${g1} (${r1})`);
@@ -889,7 +921,10 @@ export async function updateRegistrationDetails(
     return { success: true };
   } catch (err: any) {
     console.error("Error updating registration:", err);
-    return { success: false, error: err?.message || "Failed to update registration" };
+    return {
+      success: false,
+      error: err?.message || "Failed to update registration",
+    };
   }
 }
 
@@ -899,7 +934,7 @@ export async function updateRegistrationDetails(
 export async function updatePerformanceStatus(
   id: string,
   status: "pending" | "approved" | "rejected" | "none",
-  remarks: string = ""
+  remarks: string = "",
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -912,7 +947,10 @@ export async function updatePerformanceStatus(
     return { success: true };
   } catch (err: any) {
     console.error("Error updating performance status:", err);
-    return { success: false, error: err?.message || "Failed to update performance status" };
+    return {
+      success: false,
+      error: err?.message || "Failed to update performance status",
+    };
   }
 }
 
@@ -922,7 +960,7 @@ export async function updatePerformanceStatus(
 export async function updateVCInteractionStatus(
   id: string,
   status: "pending" | "approved" | "rejected" | "none",
-  remarks: string = ""
+  remarks: string = "",
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!id) return { success: false, error: "Registration ID is required" };
@@ -935,7 +973,9 @@ export async function updateVCInteractionStatus(
     return { success: true };
   } catch (err: any) {
     console.error("Error updating VC interaction status:", err);
-    return { success: false, error: err?.message || "Failed to update VC interaction status" };
+    return {
+      success: false,
+      error: err?.message || "Failed to update VC interaction status",
+    };
   }
 }
-

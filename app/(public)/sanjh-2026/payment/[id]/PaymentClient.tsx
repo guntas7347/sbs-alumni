@@ -266,9 +266,7 @@ export default function PaymentClient({
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Amount Paid:</span>
-              <strong className="text-emerald-700 font-bold">
-                ₹1,000 (INR)
-              </strong>
+              <strong className="text-emerald-700 font-bold">₹500 (INR)</strong>
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-500">Payment Mode:</span>
@@ -310,13 +308,13 @@ export default function PaymentClient({
       <div className="space-y-2 text-center sm:text-left mb-8">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-900 text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5 text-orange-600" />
-          Sanjh 2026 Alumni Meet Event Pass (₹1,000)
+          Sanjh 2026 Alumni Meet Event Pass (₹500)
         </div>
         <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">
           UPI QR Payment & Verification
         </h1>
         <p className="text-xs sm:text-sm text-zinc-600">
-          Pay ₹1,000 via official SBSSU UPI QR code, upload your transaction
+          Pay ₹500 via official SBSSU UPI QR code, upload your transaction
           screenshot, and provide your Transaction ID for manual verification.
         </p>
       </div>
@@ -392,7 +390,7 @@ export default function PaymentClient({
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">Amount:</span>
-                <span className="font-bold text-emerald-700">₹1,000 (INR)</span>
+                <span className="font-bold text-emerald-700">₹500 (INR)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">Verification Status:</span>
@@ -517,7 +515,7 @@ export default function PaymentClient({
                 Pass Fee to Pay
               </div>
               <div className="text-3xl font-black text-orange-600">
-                ₹1,000{" "}
+                ₹500{" "}
                 <span className="text-xs font-normal text-zinc-500">INR</span>
               </div>
               <p className="text-xs text-zinc-500">
@@ -538,8 +536,7 @@ export default function PaymentClient({
                   2
                 </span>
                 <span>
-                  Scan the QR code above and pay exactly <strong>₹1,000</strong>
-                  .
+                  Scan the QR code above and pay exactly <strong>₹500</strong>.
                 </span>
               </div>
               <div className="flex items-start gap-2.5">
@@ -714,7 +711,7 @@ export default function PaymentClient({
               <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-200 text-xs text-zinc-600 flex items-center justify-between">
                 <span className="text-zinc-500">Payment Mode:</span>
                 <span className="font-bold text-zinc-800 font-mono">
-                  UPI_QR (₹1,000)
+                  UPI_QR (₹500)
                 </span>
               </div>
 

@@ -35,7 +35,7 @@ Your registration has been successfully recorded in the university directory.
 1ST ALUMNI MEET & SANJH 2026:
 We invite you to attend the 1st Alumni Meet & Sanjh 2026 Annual Cultural Function on November 14, 2026, at 5:00 PM at the SBSSU campus in Ferozepur.
 
-If you plan to attend in person, please acquire your official Alumni Meet Event Pass (₹1,000) via UPI QR:
+If you plan to attend in person, please acquire your official Alumni Meet Event Pass (₹500) via UPI QR:
 ${paymentLink}
 
 View your alumni record anytime:
@@ -143,7 +143,7 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                   📍 <strong>Main University Auditorium & Campus Lawns, SBSSU Ferozepur</strong>
                 </p>
                 <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #15803d;">
-                  Visiting campus for the celebration requires an <strong>Event Pass (₹1,000)</strong>, which covers high tea, souvenir kit, grand gala dinner, and unlocks eligibility to apply to perform on stage!
+                  Visiting campus for the celebration requires an <strong>Event Pass (₹500)</strong>, which covers high tea, souvenir kit, grand gala dinner, and unlocks eligibility to apply to perform on stage!
                 </p>
               </div>
 
@@ -152,7 +152,7 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                 <tr>
                   <td align="center">
                     <a href="${paymentLink}" style="display: inline-block; background-color: #ea580c; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 800; padding: 14px 28px; border-radius: 12px; box-shadow: 0 3px 8px rgba(234,88,12,0.3);">
-                      Get Alumni Meet Pass (₹1,000 via UPI) →
+                      Get Alumni Meet Pass (₹500 via UPI) →
                     </a>
                   </td>
                 </tr>
@@ -199,7 +199,7 @@ export function getPaymentSubmittedEmailTemplate(
 We have received your payment submission for the Sanjh 2026 Alumni Meet Pass:
 - Registration Number: ${registration.regNumber}
 - Transaction ID: ${registration.txnId || registration.paymentDetails?.transactionId || "N/A"}
-- Payment Mode: UPI QR (₹1,000)
+- Payment Mode: UPI QR (₹500)
 - Status: Under Administrative Verification
 
 Our university admin team will review your payment screenshot and Transaction ID. Once verified, you will receive an email containing your official digital Event Pass.
@@ -231,12 +231,12 @@ Shaheed Bhagat Singh State University Alumni Association
             <td style="padding: 28px;">
               <p style="font-size: 14px; margin: 0 0 16px;">Dear <strong>${registration.fullName}</strong>,</p>
               <p style="font-size: 13px; line-height: 1.6; color: #52525b; margin: 0 0 20px;">
-                Thank you for submitting your payment for the <strong>Sanjh 2026 Alumni Meet Event Pass (₹1,000)</strong>. Your submission is currently being verified by the university finance committee.
+                Thank you for submitting your payment for the <strong>Sanjh 2026 Alumni Meet Event Pass (₹500)</strong>. Your submission is currently being verified by the university finance committee.
               </p>
               <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 12px; padding: 16px; margin-bottom: 20px; font-size: 13px;">
                 <div style="margin-bottom: 6px;"><strong>Registration ID:</strong> ${registration.regNumber}</div>
                 <div style="margin-bottom: 6px;"><strong>Transaction ID:</strong> <span style="font-family: monospace; font-weight: 700;">${registration.txnId || registration.paymentDetails?.transactionId || "N/A"}</span></div>
-                <div style="margin-bottom: 6px;"><strong>Payment Method:</strong> UPI QR (₹1,000)</div>
+                <div style="margin-bottom: 6px;"><strong>Payment Method:</strong> UPI QR (₹500)</div>
                 <div><strong>Status:</strong> <span style="color: #b45309; font-weight: 700;">⏳ Pending Admin Verification</span></div>
               </div>
               <p style="font-size: 13px; line-height: 1.6; color: #52525b; margin: 0 0 20px;">
@@ -283,7 +283,7 @@ OFFICIAL EVENT PASS:
 - Batch: Class of ${registration.passingYear} (${registration.era} Era)
 - Program: ${registration.degree} – ${registration.branch}
 - Transaction ID: ${registration.txnId || registration.paymentDetails?.transactionId || "Verified"}
-- Status: Active Verified Pass (₹1,000)
+- Status: Active Verified Pass (₹500)
 ${registration.guests && registration.guests.length > 0 ? `- Accompanying Family Guests (${registration.guests.length}): ${registration.guests.map((g) => `${g.name} (${g.relation})`).join(", ")}\n` : ""}- Attendance Mode: ${registration.attendanceType || "In-Person"}
 
 EVENT DETAILS:
@@ -333,7 +333,7 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                 Shaheed Bhagat Singh State University, Ferozepur
               </p>
               <div style="display: inline-block; background-color: rgba(255,255,255,0.2); backdrop-filter: blur(8px); padding: 6px 16px; rounded: 9999px; border-radius: 20px; font-size: 12px; font-weight: 800; letter-spacing: 1px;">
-                ${isComplimentary ? "✓ COMPLIMENTARY PASS" : "✓ VERIFIED ACTIVE PASS (₹1,000)"}
+                ${isComplimentary ? "✓ COMPLIMENTARY PASS" : "✓ VERIFIED ACTIVE PASS (₹500)"}
               </div>
             </td>
           </tr>
@@ -505,14 +505,14 @@ export function getPaymentProofReminderEmailTemplate(
 
 Thank you for registering for the 1st Alumni Meet & Sanjh 2026 at Shaheed Bhagat Singh State University (SBSSU), Ferozepur.
 
-We noticed that you opted to attend in person (₹1,000 Event Pass), but our records show that you have NOT uploaded your payment screenshot and UPI Transaction ID yet.
+We noticed that you opted to attend in person (₹500 Event Pass), but our records show that you have NOT uploaded your payment screenshot and UPI Transaction ID yet.
 
 IMPORTANT INSTRUCTIONS:
 1. If you already paid at the UPI QR code:
 Please visit the link below immediately and upload your payment screenshot along with your UPI Transaction ID (UTR Number). Without this screenshot, our finance team cannot verify your payment or issue your official Event Pass.
 
 2. If you have not paid yet:
-You can scan the official SBSSU UPI QR code at the link below and complete your ₹1,000 pass fee.
+You can scan the official SBSSU UPI QR code at the link below and complete your ₹500 pass fee.
 
 3. Action Required:
 If you do not upload payment proof, your entry will be treated as basic directory registration only (NOT attending), and no event pass will be issued.
@@ -558,7 +558,7 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                 Dear <strong>${registration.fullName}</strong>,
               </p>
               <p style="font-size: 13px; line-height: 1.6; color: #3f3f46; margin: 0 0 16px;">
-                We noticed that you registered for the <strong>1st Alumni Meet & Sanjh 2026</strong> and selected to <strong>Attend in Person (₹1,000 Event Pass)</strong>, but our records indicate you have <strong>not uploaded your payment screenshot and Transaction ID</strong> yet.
+                We noticed that you registered for the <strong>1st Alumni Meet & Sanjh 2026</strong> and selected to <strong>Attend in Person (₹500 Event Pass)</strong>, but our records indicate you have <strong>not uploaded your payment screenshot and Transaction ID</strong> yet.
               </p>
 
               <!-- Warning Box -->
@@ -586,7 +586,7 @@ Ferozepur, Punjab | alumni.sbssu.ac.in
                 </tr>
                 <tr>
                   <td style="color: #71717a; padding: 3px 0;">Selected Option:</td>
-                  <td style="font-weight: 700; color: #ea580c; text-align: right;">In-Person Meet Pass (₹1,000)</td>
+                  <td style="font-weight: 700; color: #ea580c; text-align: right;">In-Person Meet Pass (₹500)</td>
                 </tr>
                 <tr>
                   <td style="color: #71717a; padding: 3px 0;">Current Pass Status:</td>

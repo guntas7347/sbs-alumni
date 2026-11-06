@@ -274,7 +274,7 @@ export default function PaymentClient({
             <div className="flex justify-between">
               <span className="text-zinc-500">Amount Paid:</span>
               <strong className="text-emerald-700 font-bold">
-                ₹{registration.amount || 1000} (INR)
+                ₹{registration.amount || 500} (INR)
               </strong>
             </div>
             {paymentTxnId && (
@@ -400,7 +400,7 @@ export default function PaymentClient({
                   Total Payable:
                 </span>
                 <span className="text-2xl font-black text-orange-600">
-                  ₹{registration.amount || 1000}
+                  ₹{registration.amount || 500}
                 </span>
               </div>
               <span className="text-[11px] font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">
@@ -507,7 +507,7 @@ export default function PaymentClient({
                 </>
               ) : (
                 <>
-                  <span>Proceed to Pay ₹{registration.amount || 1000}</span>
+                  <span>Proceed to Pay ₹{registration.amount || 500}</span>
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}

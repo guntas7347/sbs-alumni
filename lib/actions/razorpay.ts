@@ -35,7 +35,9 @@ export interface RazorpayPaymentItem {
 /**
  * Creates a Razorpay order for an alumni pass registration (₹1,000 / 100,000 paise)
  */
-export async function createRazorpayOrderAction(registrationId: string): Promise<{
+export async function createRazorpayOrderAction(
+  registrationId: string,
+): Promise<{
   success: boolean;
   order?: {
     id: string;
@@ -59,11 +61,14 @@ export async function createRazorpayOrderAction(registrationId: string): Promise
 
     const regRes = await getAlumniRegistrationById(registrationId);
     if (!regRes.success || !regRes.data) {
-      return { success: false, error: regRes.error || "Registration not found in Firestore." };
+      return {
+        success: false,
+        error: regRes.error || "Registration not found in Firestore.",
+      };
     }
 
     const reg = regRes.data;
-    const amountInINR = Number(reg.amount) || 1000;
+    const amountInINR = Number(reg.amount) || 500;
     const amountInPaise = Math.round(amountInINR * 100);
 
     // Sanitize receipt to alphanumeric & underscore (max 40 chars)
@@ -131,7 +136,10 @@ export async function verifyRazorpayPaymentAction(input: {
     const { registrationId, orderId, paymentId, signature } = input;
 
     if (!registrationId || !orderId || !paymentId || !signature) {
-      return { success: false, error: "Missing required payment verification details." };
+      return {
+        success: false,
+        error: "Missing required payment verification details.",
+      };
     }
 
     const isValid = verifyPayment({
@@ -141,7 +149,10 @@ export async function verifyRazorpayPaymentAction(input: {
     });
 
     if (!isValid) {
-      return { success: false, error: "Payment signature verification failed." };
+      return {
+        success: false,
+        error: "Payment signature verification failed.",
+      };
     }
 
     // Update registration payment status in Firestore
@@ -152,7 +163,10 @@ export async function verifyRazorpayPaymentAction(input: {
     });
 
     if (!updateRes.success) {
-      return { success: false, error: updateRes.error || "Failed to update registration record." };
+      return {
+        success: false,
+        error: updateRes.error || "Failed to update registration record.",
+      };
     }
 
     // Also persist in razorpay_transactions collection for audit
@@ -161,25 +175,34 @@ export async function verifyRazorpayPaymentAction(input: {
       const regRes = await getAlumniRegistrationById(registrationId);
       const reg = regRes.data;
 
-      await db.collection("razorpay_transactions").doc(paymentId).set({
-        id: paymentId,
-        paymentId,
-        orderId,
-        signature,
-        registrationId,
-        regNumber: reg?.regNumber || "",
-        fullName: reg?.fullName || "",
-        email: reg?.email || "",
-        phone: reg?.phone || "",
-        amount: reg?.amount || 1000,
-        currency: "INR",
-        status: "captured",
-        method: "Razorpay",
-        verifiedAt: now,
-        createdAt: now,
-      }, { merge: true });
+      await db
+        .collection("razorpay_transactions")
+        .doc(paymentId)
+        .set(
+          {
+            id: paymentId,
+            paymentId,
+            orderId,
+            signature,
+            registrationId,
+            regNumber: reg?.regNumber || "",
+            fullName: reg?.fullName || "",
+            email: reg?.email || "",
+            phone: reg?.phone || "",
+            amount: reg?.amount || 500,
+            currency: "INR",
+            status: "captured",
+            method: "Razorpay",
+            verifiedAt: now,
+            createdAt: now,
+          },
+          { merge: true },
+        );
     } catch (saveErr) {
-      console.warn("Could not save to razorpay_transactions collection:", saveErr);
+      console.warn(
+        "Could not save to razorpay_transactions collection:",
+        saveErr,
+      );
     }
 
     return { success: true, transactionId: paymentId };
@@ -196,7 +219,7 @@ export async function verifyRazorpayPaymentAction(input: {
  * Fetches all payments from Razorpay API for the Admin Razorpay page
  */
 export async function getRazorpayPaymentsAction(
-  options: { count?: number; skip?: number } = {}
+  options: { count?: number; skip?: number } = {},
 ): Promise<{
   success: boolean;
   data: RazorpayPaymentItem[];
@@ -217,12 +240,15 @@ export async function getRazorpayPaymentsAction(
         totalCount = res.count || res.items.length;
       }
     } catch (apiErr: any) {
-      console.warn("Razorpay API fetch failed, falling back to Firestore records:", apiErr?.message);
+      console.warn(
+        "Razorpay API fetch failed, falling back to Firestore records:",
+        apiErr?.message,
+      );
     }
 
     const formattedList: RazorpayPaymentItem[] = items.map((item: any) => {
-      const epochSeconds = item.created_at || Math.floor(Date.now() / 1000);
-      const dateObj = new Date(epochSeconds * 1000);
+      const epochSeconds = item.created_at || Math.floor(Date.now() / 500);
+      const dateObj = new Date(epochSeconds * 500);
 
       const dateStr = dateObj.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
@@ -244,7 +270,7 @@ export async function getRazorpayPaymentsAction(
         email: item.email || item.notes?.email || "—",
         contact: item.contact || item.notes?.phone || "—",
         date: dateStr,
-        timestamp: epochSeconds * 1000,
+        timestamp: epochSeconds * 500,
         regNumber: item.notes?.regNumber || "",
         fullName: item.notes?.fullName || "",
         notes: item.notes || {},
@@ -271,7 +297,7 @@ export async function getRazorpayPaymentsAction(
           formattedList.push({
             id: doc.id,
             orderId: d.orderId || "",
-            amount: Number(d.amount) || 1000,
+            amount: Number(d.amount) || 500,
             currency: d.currency || "INR",
             status: d.status || "captured",
             method: d.method || "Razorpay",
@@ -293,7 +319,10 @@ export async function getRazorpayPaymentsAction(
         }
       });
     } catch (fsErr) {
-      console.warn("Could not read razorpay_transactions from Firestore:", fsErr);
+      console.warn(
+        "Could not read razorpay_transactions from Firestore:",
+        fsErr,
+      );
     }
 
     // Sort by timestamp descending

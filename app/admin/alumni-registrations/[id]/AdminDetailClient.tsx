@@ -4,7 +4,10 @@ import React, { useState, useEffect, use } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { getAlumniRegistrationById, getAllRegistrations } from "@/lib/actions/alumniActions";
+import {
+  getAlumniRegistrationById,
+  getAllRegistrations,
+} from "@/lib/actions/alumniActions";
 import {
   updateRegistrationStatus,
   deleteRegistration,
@@ -52,7 +55,9 @@ export default function AdminDetailClient({
   const { id } = use(params);
   const router = useRouter();
 
-  const [registration, setRegistration] = useState<AlumniRegistration | null>(null);
+  const [registration, setRegistration] = useState<AlumniRegistration | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savingNotes, setSavingNotes] = useState(false);
@@ -61,7 +66,9 @@ export default function AdminDetailClient({
   const [deleting, setDeleting] = useState(false);
   const [actingOnPass, setActingOnPass] = useState(false);
   const [reviewingPerf, setReviewingPerf] = useState(false);
-  const [duplicateMatches, setDuplicateMatches] = useState<AlumniRegistration[]>([]);
+  const [duplicateMatches, setDuplicateMatches] = useState<
+    AlumniRegistration[]
+  >([]);
   const [viewScreenshotModal, setViewScreenshotModal] = useState(false);
 
   const fetchReg = () => {
@@ -78,7 +85,7 @@ export default function AdminDetailClient({
                 const matches = allRes.data.filter(
                   (other) =>
                     other.id !== res.data!.id &&
-                    other.txnId?.trim().toLowerCase() === tid
+                    other.txnId?.trim().toLowerCase() === tid,
                 );
                 setDuplicateMatches(matches);
               }
@@ -104,12 +111,17 @@ export default function AdminDetailClient({
     if (!confirm(confirmMsg)) return;
 
     setActingOnPass(true);
-    const res = await verifyAlumniPayment(registration.id, targetVerified, adminNotes, "Admin");
+    const res = await verifyAlumniPayment(
+      registration.id,
+      targetVerified,
+      adminNotes,
+      "Admin",
+    );
     if (res.success) {
       setActionSuccess(
         targetVerified
           ? "Payment verified & official Event Pass sent via email!"
-          : "Payment marked as unverified."
+          : "Payment marked as unverified.",
       );
       fetchReg();
       setTimeout(() => setActionSuccess(null), 3500);
@@ -125,10 +137,12 @@ export default function AdminDetailClient({
     const res = await issueComplimentaryPass(
       registration.id,
       "Faculty / Admin Complimentary Pass",
-      "Administrator"
+      "Administrator",
     );
     if (res.success) {
-      setActionSuccess("Complimentary Alumni Meet Pass (₹1,000 value) issued successfully!");
+      setActionSuccess(
+        "Complimentary Alumni Meet Pass (₹1,000 value) issued successfully!",
+      );
       fetchReg();
       setTimeout(() => setActionSuccess(null), 3500);
     } else {
@@ -139,13 +153,19 @@ export default function AdminDetailClient({
 
   const handleRevokePass = async () => {
     if (!registration) return;
-    if (!confirm("Are you sure you want to revoke the Sanjh 2026 Event Pass for this alumnus?")) {
+    if (
+      !confirm(
+        "Are you sure you want to revoke the Sanjh 2026 Event Pass for this alumnus?",
+      )
+    ) {
       return;
     }
     setActingOnPass(true);
     const res = await revokePass(registration.id);
     if (res.success) {
-      setActionSuccess("Pass revoked. Alumnus remains registered in the free directory.");
+      setActionSuccess(
+        "Pass revoked. Alumnus remains registered in the free directory.",
+      );
       fetchReg();
       setTimeout(() => setActionSuccess(null), 3500);
     } else {
@@ -159,13 +179,13 @@ export default function AdminDetailClient({
     const hasPass = Boolean(
       registration.hasPass ||
       registration.passStatus === "active" ||
-      registration.paymentStatus === "completed"
+      registration.paymentStatus === "completed",
     );
 
     if (!hasPass && !registration.checkedIn) {
       if (
         !confirm(
-          "Notice: This alumnus does NOT currently have an active Event Pass (₹1,000). Are you sure you want to bypass and mark them checked-in?"
+          "Notice: This alumnus does NOT currently have an active Event Pass (₹1,000). Are you sure you want to bypass and mark them checked-in?",
         )
       ) {
         return;
@@ -177,7 +197,11 @@ export default function AdminDetailClient({
       checkedIn: newCheckIn,
     });
     if (res.success) {
-      setActionSuccess(newCheckIn ? "Alumnus marked as Checked-In at venue!" : "Check-in revoked.");
+      setActionSuccess(
+        newCheckIn
+          ? "Alumnus marked as Checked-In at venue!"
+          : "Check-in revoked.",
+      );
       fetchReg();
       setTimeout(() => setActionSuccess(null), 3000);
     }
@@ -188,7 +212,7 @@ export default function AdminDetailClient({
     const remarks = prompt(
       decision === "approved"
         ? "Enter any coordinator remarks / stage instructions (optional):"
-        : "Enter reason for rejection (optional):"
+        : "Enter reason for rejection (optional):",
     );
     if (remarks === null) return; // user cancelled prompt
 
@@ -197,11 +221,13 @@ export default function AdminDetailClient({
       registration.id,
       decision,
       remarks,
-      "Admin"
+      "Admin",
     );
 
     if (res.success) {
-      setActionSuccess(`Stage performance request marked as ${decision.toUpperCase()}!`);
+      setActionSuccess(
+        `Stage performance request marked as ${decision.toUpperCase()}!`,
+      );
       fetchReg();
       setTimeout(() => setActionSuccess(null), 3500);
     } else {
@@ -227,7 +253,7 @@ export default function AdminDetailClient({
     if (!registration) return;
     if (
       !confirm(
-        `Are you sure you want to permanently delete registration ${registration.regNumber} (${registration.fullName}) from Firestore?`
+        `Are you sure you want to permanently delete registration ${registration.regNumber} (${registration.fullName}) from Firestore?`,
       )
     ) {
       return;
@@ -246,7 +272,7 @@ export default function AdminDetailClient({
   const hasPass = Boolean(
     registration?.hasPass ||
     registration?.passStatus === "active" ||
-    registration?.paymentStatus === "completed"
+    registration?.paymentStatus === "completed",
   );
   const perf = registration?.performanceApplication;
   const perfStatus = registration?.performerStatus || perf?.status || "none";
@@ -260,7 +286,10 @@ export default function AdminDetailClient({
             Admin
           </Link>
           <span>/</span>
-          <Link href="/admin/alumni-registrations" className="hover:text-zinc-900">
+          <Link
+            href="/admin/alumni-registrations"
+            className="hover:text-zinc-900"
+          >
             Alumni Directory
           </Link>
           <span>/</span>
@@ -299,12 +328,16 @@ export default function AdminDetailClient({
       {loading ? (
         <div className="py-24 flex flex-col items-center justify-center gap-2">
           <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
-          <span className="text-xs text-zinc-500">Loading alumnus record...</span>
+          <span className="text-xs text-zinc-500">
+            Loading alumnus record...
+          </span>
         </div>
       ) : error || !registration ? (
         <div className="p-6 bg-white rounded-3xl border border-rose-200 text-center space-y-3">
           <AlertCircle className="w-8 h-8 text-rose-600 mx-auto" />
-          <h3 className="font-bold text-zinc-900 text-base">{error || "Record not found"}</h3>
+          <h3 className="font-bold text-zinc-900 text-base">
+            {error || "Record not found"}
+          </h3>
           <Link
             href="/admin/alumni-registrations"
             className="inline-block text-xs font-semibold text-orange-600 hover:underline"
@@ -348,10 +381,12 @@ export default function AdminDetailClient({
                 </div>
 
                 <p className="text-xs text-zinc-500 mt-1">
-                  {registration.degree} – {registration.branch} (Batch of {registration.passingYear}) • {registration.era} Era
+                  {registration.degree} – {registration.branch} (Batch of{" "}
+                  {registration.passingYear}) • {registration.era} Era
                 </p>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Registered in database on: {new Date(registration.createdAt).toLocaleString()}
+                  Registered in database on:{" "}
+                  {new Date(registration.createdAt).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -406,7 +441,9 @@ export default function AdminDetailClient({
                     : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
                 }`}
               >
-                {registration.checkedIn ? "✓ Checked-In at Venue" : "Check-in Attendee"}
+                {registration.checkedIn
+                  ? "✓ Checked-In at Venue"
+                  : "Check-in Attendee"}
               </button>
 
               <button
@@ -427,8 +464,8 @@ export default function AdminDetailClient({
                 perfStatus === "approved"
                   ? "bg-emerald-50/50 border-emerald-300"
                   : perfStatus === "rejected"
-                  ? "bg-zinc-50 border-zinc-200"
-                  : "bg-amber-50/50 border-amber-300"
+                    ? "bg-zinc-50 border-zinc-200"
+                    : "bg-amber-50/50 border-amber-300"
               }`}
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-200/60 pb-3">
@@ -452,8 +489,8 @@ export default function AdminDetailClient({
                       perfStatus === "approved"
                         ? "bg-emerald-100 text-emerald-800 border-emerald-300"
                         : perfStatus === "rejected"
-                        ? "bg-zinc-200 text-zinc-700 border-zinc-300"
-                        : "bg-amber-100 text-amber-900 border-amber-300"
+                          ? "bg-zinc-200 text-zinc-700 border-zinc-300"
+                          : "bg-amber-100 text-amber-900 border-amber-300"
                     }`}
                   >
                     Status: {perfStatus}
@@ -463,23 +500,33 @@ export default function AdminDetailClient({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
-                  <span className="text-zinc-500 block">Performance Act Title:</span>
-                  <strong className="text-sm font-bold text-zinc-900">{perf.title}</strong>
+                  <span className="text-zinc-500 block">
+                    Performance Act Title:
+                  </span>
+                  <strong className="text-sm font-bold text-zinc-900">
+                    {perf.title}
+                  </strong>
                 </div>
                 <div>
-                  <span className="text-zinc-500 block">Category & Duration:</span>
+                  <span className="text-zinc-500 block">
+                    Category & Duration:
+                  </span>
                   <span className="font-semibold text-zinc-800">
                     {perf.category} ({perf.durationMinutes || "5-7 mins"})
                   </span>
                 </div>
                 <div className="md:col-span-2">
-                  <span className="text-zinc-500 block mb-1">Act Description:</span>
+                  <span className="text-zinc-500 block mb-1">
+                    Act Description:
+                  </span>
                   <div className="p-3 rounded-xl bg-white border border-zinc-200 text-zinc-700 italic">
                     &ldquo;{perf.description}&rdquo;
                   </div>
                 </div>
                 <div>
-                  <span className="text-zinc-500 block mb-1">Resume / Video Audition URL:</span>
+                  <span className="text-zinc-500 block mb-1">
+                    Resume / Video Audition URL:
+                  </span>
                   {perf.resumeUrl ? (
                     <a
                       href={perf.resumeUrl}
@@ -492,12 +539,18 @@ export default function AdminDetailClient({
                       <ExternalLink className="w-3 h-3" />
                     </a>
                   ) : (
-                    <span className="text-zinc-400 italic">No link provided</span>
+                    <span className="text-zinc-400 italic">
+                      No link provided
+                    </span>
                   )}
                 </div>
                 <div>
-                  <span className="text-zinc-500 block">Stage / Audio Needs:</span>
-                  <span className="text-zinc-700">{perf.specialRequirements || "Standard stage mic"}</span>
+                  <span className="text-zinc-500 block">
+                    Stage / Audio Needs:
+                  </span>
+                  <span className="text-zinc-700">
+                    {perf.specialRequirements || "Standard stage mic"}
+                  </span>
                 </div>
               </div>
 
@@ -505,16 +558,23 @@ export default function AdminDetailClient({
                 <div className="p-3 rounded-xl bg-white border border-zinc-200 text-xs text-zinc-600 space-y-1">
                   <div className="flex justify-between">
                     <span className="font-semibold">Review Decision:</span>
-                    <span className="capitalize font-bold text-zinc-900">{perfStatus}</span>
+                    <span className="capitalize font-bold text-zinc-900">
+                      {perfStatus}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-400">Reviewed By:</span>
-                    <span>{perf.reviewedBy} on {new Date(perf.reviewedAt).toLocaleString()}</span>
+                    <span>
+                      {perf.reviewedBy} on{" "}
+                      {new Date(perf.reviewedAt).toLocaleString()}
+                    </span>
                   </div>
                   {perf.adminRemarks && (
                     <div className="pt-1 border-t border-zinc-100">
                       <span className="text-zinc-400 block">Remarks:</span>
-                      <p className="italic text-zinc-800">{perf.adminRemarks}</p>
+                      <p className="italic text-zinc-800">
+                        {perf.adminRemarks}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -557,11 +617,15 @@ export default function AdminDetailClient({
               <dl className="space-y-2.5 text-xs">
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Google Email:</dt>
-                  <dd className="font-semibold text-zinc-800">{registration.email}</dd>
+                  <dd className="font-semibold text-zinc-800">
+                    {registration.email}
+                  </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Phone Number:</dt>
-                  <dd className="font-semibold text-zinc-800">{registration.phone}</dd>
+                  <dd className="font-semibold text-zinc-800">
+                    {registration.phone}
+                  </dd>
                 </div>
                 {registration.whatsapp && (
                   <div className="flex justify-between">
@@ -572,7 +636,11 @@ export default function AdminDetailClient({
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Location:</dt>
                   <dd className="text-zinc-800">
-                    {[registration.city, registration.state, registration.country]
+                    {[
+                      registration.city,
+                      registration.state,
+                      registration.country,
+                    ]
                       .filter(Boolean)
                       .join(", ") || "—"}
                   </dd>
@@ -618,7 +686,9 @@ export default function AdminDetailClient({
                 {registration.rollNumber && (
                   <div className="flex justify-between">
                     <dt className="text-zinc-500">College Roll Number:</dt>
-                    <dd className="font-mono text-zinc-800">{registration.rollNumber}</dd>
+                    <dd className="font-mono text-zinc-800">
+                      {registration.rollNumber}
+                    </dd>
                   </div>
                 )}
               </dl>
@@ -636,15 +706,15 @@ export default function AdminDetailClient({
                     registration.verified
                       ? "bg-emerald-100 text-emerald-800"
                       : registration.txnId
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-zinc-100 text-zinc-600"
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-zinc-100 text-zinc-600"
                   }`}
                 >
                   {registration.verified
                     ? "✓ Payment Verified"
                     : registration.txnId
-                    ? "⏳ Pending Verification"
-                    : "No Payment Submitted"}
+                      ? "⏳ Pending Verification"
+                      : "No Payment Submitted"}
                 </span>
               </div>
 
@@ -656,8 +726,9 @@ export default function AdminDetailClient({
                     <span>CRITICAL WARNING: DUPLICATE TRANSACTION ID!</span>
                   </div>
                   <p className="text-[11px] leading-relaxed text-rose-900">
-                    The transaction ID <strong>{registration.txnId}</strong> is also used by{" "}
-                    <strong>{duplicateMatches.length}</strong> other applicant(s):
+                    The transaction ID <strong>{registration.txnId}</strong> is
+                    also used by <strong>{duplicateMatches.length}</strong>{" "}
+                    other applicant(s):
                   </p>
                   <ul className="list-disc list-inside font-mono text-[11px] text-rose-950 pl-1">
                     {duplicateMatches.map((m) => (
@@ -672,7 +743,8 @@ export default function AdminDetailClient({
                     ))}
                   </ul>
                   <p className="text-[10px] text-rose-800 font-medium pt-1">
-                    Please inspect the screenshot below and verify whether this payment was made twice or re-used.
+                    Please inspect the screenshot below and verify whether this
+                    payment was made twice or re-used.
                   </p>
                 </div>
               )}
@@ -688,7 +760,9 @@ export default function AdminDetailClient({
                           : "bg-zinc-100 text-zinc-600"
                       }`}
                     >
-                      {hasPass ? "✓ Active (Pass Issued)" : "No Pass (Registered Only)"}
+                      {hasPass
+                        ? "✓ Active (Pass Issued)"
+                        : "No Pass (Registered Only)"}
                     </span>
                   </dd>
                 </div>
@@ -696,21 +770,27 @@ export default function AdminDetailClient({
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Pass Price:</dt>
                   <dd className="font-extrabold text-orange-600 text-sm">
-                    {hasPass ? `₹${registration.amount || 1000}` : "₹0 (Registration)"}
+                    {hasPass
+                      ? `₹${registration.amount || 500}`
+                      : "₹0 (Registration)"}
                   </dd>
                 </div>
 
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Payment Mode:</dt>
                   <dd className="font-mono text-zinc-800 font-semibold">
-                    {registration.paymentMode || registration.paymentDetails?.paymentMethod || "UPI_QR"}
+                    {registration.paymentMode ||
+                      registration.paymentDetails?.paymentMethod ||
+                      "UPI_QR"}
                   </dd>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <dt className="text-zinc-500">Transaction ID (TxnId):</dt>
                   <dd className="font-mono text-zinc-900 font-bold bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
-                    {registration.txnId || registration.paymentDetails?.transactionId || "—"}
+                    {registration.txnId ||
+                      registration.paymentDetails?.transactionId ||
+                      "—"}
                   </dd>
                 </div>
 
@@ -719,10 +799,14 @@ export default function AdminDetailClient({
                   <dd>
                     <span
                       className={`font-bold ${
-                        registration.verified ? "text-emerald-700" : "text-amber-700"
+                        registration.verified
+                          ? "text-emerald-700"
+                          : "text-amber-700"
                       }`}
                     >
-                      {registration.verified ? "✓ Verified by Admin" : "⏳ Unverified"}
+                      {registration.verified
+                        ? "✓ Verified by Admin"
+                        : "⏳ Unverified"}
                     </span>
                   </dd>
                 </div>
@@ -731,7 +815,9 @@ export default function AdminDetailClient({
                 {registration.screenshotUrl ? (
                   <div className="pt-2 border-t border-zinc-100 space-y-2">
                     <div className="flex items-center justify-between">
-                      <dt className="text-zinc-500 font-medium">Payment Screenshot:</dt>
+                      <dt className="text-zinc-500 font-medium">
+                        Payment Screenshot:
+                      </dt>
                       <a
                         href={registration.screenshotUrl}
                         target="_blank"
@@ -806,7 +892,10 @@ export default function AdminDetailClient({
                 <div className="flex justify-between items-baseline">
                   <dt className="text-zinc-500">Accompanying Guests:</dt>
                   <dd className="font-semibold text-zinc-800">
-                    {registration.guests?.length ?? registration.guestCount ?? 0} Guest(s) (Max 3)
+                    {registration.guests?.length ??
+                      registration.guestCount ??
+                      0}{" "}
+                    Guest(s) (Max 3)
                   </dd>
                 </div>
                 {registration.guests && registration.guests.length > 0 && (
@@ -870,7 +959,8 @@ export default function AdminDetailClient({
               Administrative Notes & Seating Assignment
             </h3>
             <p className="text-xs text-zinc-500">
-              Internal remarks visible only to verified administrators in Firestore.
+              Internal remarks visible only to verified administrators in
+              Firestore.
             </p>
             <textarea
               rows={3}
